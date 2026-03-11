@@ -43,32 +43,17 @@
   line-height: var(--line-height-relaxed);
 }
 
-.initForm {
-  display: flex;
-  gap: var(--space-2);
+.workspaceIcon {
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.openWorkspaceButton {
+  display: inline-flex;
   align-items: center;
-}
-
-.initInput {
-  height: 36px;
-  padding: var(--space-2) var(--space-3);
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: var(--font-size-sm);
-  width: 240px;
-}
-
-.initInput:focus {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-focus);
-  outline: none;
-}
-
-.initButton {
-  height: 36px;
-  padding: var(--space-2) var(--space-4);
+  gap: var(--space-2);
+  height: 40px;
+  padding: var(--space-2) var(--space-5, 20px);
   background-color: var(--accent);
   color: var(--text-primary);
   border: none;
@@ -77,12 +62,13 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: background-color var(--transition-base);
+  margin-top: var(--space-2);
 }
 
-.initButton:hover {
+.openWorkspaceButton:hover {
   background-color: var(--accent-hover);
 }
 
-.initButton:active {
+.openWorkspaceButton:active {
   background-color: var(--accent-active);
 }

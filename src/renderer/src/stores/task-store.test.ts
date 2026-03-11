@@ -170,11 +170,35 @@ describe('useTaskStore', () => {
       mockApi.updateTask.mockResolvedValue(undefined)
       mockApi.writeProjectState.mockResolvedValue(undefined)
 
-      await useTaskStore.getState().moveTask(task.id, 'in-progress', 3)
+      await useTaskStore.getState().moveTask(task.id, 'in-progress', 0)
 
       const stored = useTaskStore.getState().projectState!.tasks[0]
       expect(stored.status).toBe('in-progress')
-      expect(stored.sortOrder).toBe(3)
+      expect(stored.sortOrder).toBe(0)
+    })
+
+    it('inserts at correct position among existing tasks', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'backlog', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 0 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 1 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Move t1 from backlog to todo at index 1 (between t2 and t3)
+      await useTaskStore.getState().moveTask('tsk_a', 'todo', 1)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      const movedTask = tasks.find((t) => t.id === 'tsk_a')!
+      expect(movedTask.status).toBe('todo')
+      expect(movedTask.sortOrder).toBe(1)
+
+      // t2 stays at 0, t3 shifts to 2
+      const taskB = tasks.find((t) => t.id === 'tsk_b')!
+      const taskC = tasks.find((t) => t.id === 'tsk_c')!
+      expect(taskB.sortOrder).toBe(0)
+      expect(taskC.sortOrder).toBe(2)
     })
 
     it('throws when task not found', async () => {

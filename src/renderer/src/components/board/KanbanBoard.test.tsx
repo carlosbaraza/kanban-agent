@@ -67,11 +67,11 @@ describe('KanbanBoard', () => {
     expect(screen.getByText('Loading project...')).toBeInTheDocument()
   })
 
-  it('renders init screen when no project state', () => {
+  it('renders open workspace screen when no project state', () => {
     useTaskStore.setState({ isLoading: false, projectState: null })
     render(<KanbanBoard />)
-    expect(screen.getByText('Welcome to Kanban Agent')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Project name...')).toBeInTheDocument()
+    expect(screen.getByText('Kanban Agent')).toBeInTheDocument()
+    expect(screen.getByText('Open Workspace')).toBeInTheDocument()
   })
 
   it('renders all 6 columns', () => {

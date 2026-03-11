@@ -21,6 +21,14 @@ export class DataService {
     this.projectRoot = projectRoot
   }
 
+  setProjectRoot(newRoot: string): void {
+    this.projectRoot = newRoot
+  }
+
+  getProjectRoot(): string {
+    return this.projectRoot
+  }
+
   private getDataPath(...segments: string[]): string {
     return path.join(this.projectRoot, DATA_DIR, ...segments)
   }

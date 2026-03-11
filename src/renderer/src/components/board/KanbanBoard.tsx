@@ -6,9 +6,16 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
-  closestCorners
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision
 } from '@dnd-kit/core'
-import type { DragStartEvent, DragEndEvent, DragOverEvent } from '@dnd-kit/core'
+import type {
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+  CollisionDetection
+} from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { Task, TaskStatus } from '@shared/types'
 import { DEFAULT_COLUMNS } from '@shared/constants'
@@ -28,7 +35,6 @@ export function KanbanBoard(): React.JSX.Element {
     useUIStore()
   const { setDraggedTask, setDragOverColumn } = useBoardStore()
 
-  const [initName, setInitName] = useState('')
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [createColumnIndex, setCreateColumnIndex] = useState<number | null>(null)
 
@@ -42,6 +48,26 @@ export function KanbanBoard(): React.JSX.Element {
     coordinateGetter: sortableKeyboardCoordinates
   })
   const sensors = useSensors(pointerSensor, keyboardSensor)
+
+  // Custom collision detection: prefer pointerWithin (detects the column the pointer
+  // is inside), then fall back to rectIntersection for edge cases (e.g. fast drags).
+  const collisionDetection: CollisionDetection = useCallback((args) => {
+    // First try pointerWithin — this reliably detects which column droppable
+    // the pointer is currently inside, even for empty columns.
+    const pointerCollisions = pointerWithin(args)
+    if (pointerCollisions.length > 0) {
+      // Prefer sortable items over column droppables when both are detected,
+      // so that drop-between-cards positioning works correctly.
+      const firstCollision = getFirstCollision(pointerCollisions, 'id')
+      if (firstCollision) {
+        return [firstCollision]
+      }
+      return pointerCollisions
+    }
+
+    // Fallback to rect intersection
+    return rectIntersection(args)
+  }, [])
 
   // Filter tasks using shared utility
   const filteredTasks = useMemo(() => {
@@ -193,12 +219,10 @@ export function KanbanBoard(): React.JSX.Element {
     [tasksByStatus, findTaskColumn, moveTask, reorderTask, setDraggedTask, setDragOverColumn]
   )
 
-  const handleInitProject = useCallback(async () => {
-    if (initName.trim()) {
-      const { initProject } = useTaskStore.getState()
-      await initProject(initName.trim())
-    }
-  }, [initName])
+  const handleOpenWorkspace = useCallback(async () => {
+    const { openWorkspace } = useTaskStore.getState()
+    await openWorkspace()
+  }, [])
 
   // Loading state
   if (isLoading) {
@@ -209,27 +233,23 @@ export function KanbanBoard(): React.JSX.Element {
     )
   }
 
-  // No project state — show init screen
+  // No project state — show open workspace screen
   if (!projectState) {
     return (
       <div className={styles.emptyProject}>
-        <h2>Welcome to Kanban Agent</h2>
-        <p>Create a new project to get started with your AI-powered kanban board.</p>
-        <div className={styles.initForm}>
-          <input
-            className={styles.initInput}
-            type="text"
-            placeholder="Project name..."
-            value={initName}
-            onChange={(e) => setInitName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleInitProject()
-            }}
-          />
-          <button className={styles.initButton} onClick={handleInitProject}>
-            Create Project
-          </button>
+        <div className={styles.workspaceIcon}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
         </div>
+        <h2>Kanban Agent</h2>
+        <p>Open a folder to get started. If the folder already contains a project, it will be loaded automatically.</p>
+        <button className={styles.openWorkspaceButton} onClick={handleOpenWorkspace}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+          Open Workspace
+        </button>
       </div>
     )
   }
@@ -237,7 +257,7 @@ export function KanbanBoard(): React.JSX.Element {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

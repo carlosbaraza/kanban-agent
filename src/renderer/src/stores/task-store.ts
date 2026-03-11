@@ -10,6 +10,7 @@ interface TaskStore {
   // Actions
   loadProjectState: () => Promise<void>
   initProject: (name: string) => Promise<void>
+  openWorkspace: () => Promise<boolean>
 
   // Task CRUD
   addTask: (title: string, options?: Partial<Task>) => Promise<Task>
@@ -61,6 +62,35 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       set({ projectState: state, isLoading: false })
     } catch (err) {
       set({ error: (err as Error).message, isLoading: false })
+    }
+  },
+
+  openWorkspace: async (): Promise<boolean> => {
+    try {
+      const selectedPath = await window.api.openDirectory()
+      if (!selectedPath) return false
+
+      // Set the new project root in the main process
+      await window.api.setProjectRoot(selectedPath)
+
+      // Check if the folder already has .kanban-agent/
+      const initialized = await window.api.isInitialized()
+      if (initialized) {
+        // Load existing project
+        set({ isLoading: true, error: null })
+        const state = await window.api.readProjectState()
+        set({ projectState: state, isLoading: false })
+      } else {
+        // Initialize a new project using the folder name
+        const folderName = selectedPath.split('/').pop() || 'Untitled'
+        set({ isLoading: true, error: null })
+        const state = await window.api.initProject(folderName)
+        set({ projectState: state, isLoading: false })
+      }
+      return true
+    } catch (err) {
+      set({ error: (err as Error).message, isLoading: false })
+      return false
     }
   },
 
@@ -135,32 +165,94 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   moveTask: async (
     taskId: string,
     newStatus: TaskStatus,
-    newSortOrder: number
+    newIndex: number
   ): Promise<void> => {
-    const { projectState, updateTask } = get()
+    const { projectState } = get()
     if (!projectState) throw new Error('Project not initialized')
 
     const task = projectState.tasks.find((t: Task) => t.id === taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
 
-    await updateTask({
-      ...task,
-      status: newStatus,
-      sortOrder: newSortOrder
+    // Get sorted tasks in the target column (excluding the moved task)
+    const targetColumnTasks = projectState.tasks
+      .filter((t: Task) => t.status === newStatus && t.id !== taskId)
+      .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+
+    // Insert the moved task at the target index
+    const clampedIndex = Math.min(newIndex, targetColumnTasks.length)
+    targetColumnTasks.splice(clampedIndex, 0, task)
+
+    // Build a map of new sort orders for the target column
+    const sortUpdates = new Map<string, number>()
+    for (let i = 0; i < targetColumnTasks.length; i++) {
+      sortUpdates.set(targetColumnTasks[i].id, i)
+    }
+
+    // Also re-index the source column (the moved task is leaving it)
+    if (task.status !== newStatus) {
+      const sourceColumnTasks = projectState.tasks
+        .filter((t: Task) => t.status === task.status && t.id !== taskId)
+        .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+      for (let i = 0; i < sourceColumnTasks.length; i++) {
+        sortUpdates.set(sourceColumnTasks[i].id, i)
+      }
+    }
+
+    const now = new Date().toISOString()
+    const updatedTasks = projectState.tasks.map((t: Task) => {
+      if (t.id === taskId) {
+        return { ...t, status: newStatus, sortOrder: clampedIndex, updatedAt: now }
+      }
+      const newSort = sortUpdates.get(t.id)
+      if (newSort !== undefined && newSort !== t.sortOrder) {
+        return { ...t, sortOrder: newSort, updatedAt: now }
+      }
+      return t
     })
+
+    const newState: ProjectState = { ...projectState, tasks: updatedTasks }
+    const movedTask = updatedTasks.find((t: Task) => t.id === taskId)!
+    await window.api.updateTask(movedTask)
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
   },
 
-  reorderTask: async (taskId: string, newSortOrder: number): Promise<void> => {
-    const { projectState, updateTask } = get()
+  reorderTask: async (taskId: string, newIndex: number): Promise<void> => {
+    const { projectState } = get()
     if (!projectState) throw new Error('Project not initialized')
 
     const task = projectState.tasks.find((t: Task) => t.id === taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
 
-    await updateTask({
-      ...task,
-      sortOrder: newSortOrder
+    // Get sorted tasks in the same column, remove the task, reinsert at new position
+    const columnTasks = projectState.tasks
+      .filter((t: Task) => t.status === task.status)
+      .sort((a: Task, b: Task) => a.sortOrder - b.sortOrder)
+
+    const filtered = columnTasks.filter((t) => t.id !== taskId)
+    const clampedIndex = Math.min(newIndex, filtered.length)
+    filtered.splice(clampedIndex, 0, task)
+
+    // Build a map of new sort orders
+    const sortUpdates = new Map<string, number>()
+    for (let i = 0; i < filtered.length; i++) {
+      sortUpdates.set(filtered[i].id, i)
+    }
+
+    const now = new Date().toISOString()
+    const updatedTasks = projectState.tasks.map((t: Task) => {
+      const newSort = sortUpdates.get(t.id)
+      if (newSort !== undefined && newSort !== t.sortOrder) {
+        return { ...t, sortOrder: newSort, updatedAt: now }
+      }
+      return t
     })
+
+    const newState: ProjectState = { ...projectState, tasks: updatedTasks }
+    const reorderedTask = updatedTasks.find((t: Task) => t.id === taskId)!
+    await window.api.updateTask(reorderedTask)
+    await window.api.writeProjectState(newState)
+    set({ projectState: newState })
   },
 
   // Helpers

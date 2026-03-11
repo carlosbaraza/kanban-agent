@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { DataService } from '../services/data-service'
 
 export function registerFileHandlers(dataService: DataService): void {
+  ipcMain.handle('project:get-root', async () => dataService.getProjectRoot())
   ipcMain.handle('project:read-state', async () => dataService.readProjectState())
   ipcMain.handle('project:write-state', async (_, state) => dataService.writeProjectState(state))
   ipcMain.handle('project:init', async (_, name) => dataService.initProject(name))

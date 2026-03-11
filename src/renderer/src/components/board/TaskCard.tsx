@@ -31,7 +31,10 @@ export function TaskCard({
     transform,
     transition,
     isDragging: isSortableDragging
-  } = useSortable({ id: task.id })
+  } = useSortable({
+    id: task.id,
+    data: { type: 'task', task, status: task.status }
+  })
 
   const { updateTask, deleteTask } = useTaskStore()
   const contextMenu = useContextMenu()

@@ -16,8 +16,7 @@ const ptyManager = new ElectronPtyManager(tmuxManager)
 let fileWatcher: FileWatcher | null = null
 
 // Default project root to the current working directory
-const projectRoot = process.cwd()
-const dataService = new DataService(projectRoot)
+const dataService = new DataService(process.cwd())
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -38,7 +37,7 @@ function createWindow(): void {
     mainWindow.show()
 
     // Start file watcher after window is ready
-    fileWatcher = new FileWatcher(projectRoot, mainWindow)
+    fileWatcher = new FileWatcher(dataService.getProjectRoot(), mainWindow)
     fileWatcher.start()
   })
 
@@ -60,7 +59,12 @@ function createWindow(): void {
   registerTmuxHandlers(tmuxManager)
   registerFileHandlers(dataService)
   registerNotificationHandlers()
-  registerWindowHandlers(mainWindow)
+  registerWindowHandlers(
+    mainWindow,
+    dataService,
+    () => fileWatcher,
+    (fw) => { fileWatcher = fw }
+  )
 }
 
 app.whenReady().then(() => {

@@ -5,6 +5,7 @@ import type { ProjectState, Task, ActivityEntry } from '../shared/types'
 // Custom APIs for renderer
 const api = {
   // Project
+  getProjectRoot: (): Promise<string> => ipcRenderer.invoke('project:get-root'),
   readProjectState: (): Promise<ProjectState> => ipcRenderer.invoke('project:read-state'),
   writeProjectState: (state: ProjectState): Promise<void> =>
     ipcRenderer.invoke('project:write-state', state),
@@ -64,6 +65,7 @@ const api = {
 
   // Window
   openDirectory: (): Promise<string | null> => ipcRenderer.invoke('window:open-directory'),
+  setProjectRoot: (path: string): Promise<boolean> => ipcRenderer.invoke('project:set-root', path),
   onExternalTaskOpen: (callback: (taskId: string) => void): (() => void) => {
     ipcRenderer.on('task:open-external', (_, taskId: string) => callback(taskId))
     return () => {

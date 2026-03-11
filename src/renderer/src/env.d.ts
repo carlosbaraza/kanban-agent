@@ -13,6 +13,7 @@ declare global {
     }
     api: {
       // Project
+      getProjectRoot(): Promise<string>
       readProjectState(): Promise<ProjectState>
       writeProjectState(state: ProjectState): Promise<void>
       initProject(name: string): Promise<ProjectState>
@@ -52,6 +53,7 @@ declare global {
 
       // Window
       openDirectory(): Promise<string | null>
+      setProjectRoot(path: string): Promise<boolean>
       onExternalTaskOpen(callback: (taskId: string) => void): () => void
 
       // File watching

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import type { TerminalPane } from '@shared/types/terminal'
 import { Terminal } from './Terminal'
@@ -21,12 +21,24 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const [panes, setPanes] = useState<TerminalPane[]>(() => [createPane(0)])
   const [activePane, setActivePane] = useState<string>(() => panes[0].id)
   const [sessions, setSessions] = useState<Record<string, string>>({})
+  const projectRootRef = useRef<string | null>(null)
+
+  // Fetch project root once on mount
+  useEffect(() => {
+    window.api.getProjectRoot().then((root) => {
+      projectRootRef.current = root
+    }).catch((err) => {
+      console.error('Failed to get project root:', err)
+      projectRootRef.current = '/'
+    })
+  }, [])
 
   const initSession = useCallback(
     async (paneId: string) => {
       if (sessions[paneId]) return
       try {
-        const sessionId = await window.api.ptyCreate(taskId, paneId, process.cwd?.() ?? '/')
+        const cwd = projectRootRef.current ?? await window.api.getProjectRoot()
+        const sessionId = await window.api.ptyCreate(taskId, paneId, cwd)
         setSessions((prev) => ({ ...prev, [paneId]: sessionId }))
       } catch (err) {
         console.error('Failed to create PTY session:', err)

@@ -61,7 +61,6 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX
             ) : (
               <div className={styles.editorArea}>Loading...</div>
             )}
-            <ActivityTimeline taskId={taskId} />
           </div>
         }
         right={
