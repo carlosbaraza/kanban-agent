@@ -1,0 +1,88 @@
+/* ==========================================================================
+   KanbanBoard — Horizontal scrolling board
+   ========================================================================== */
+
+.board {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 100%;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.emptyProject {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: var(--space-4);
+  color: var(--text-secondary);
+}
+
+.emptyProject h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+.emptyProject p {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  max-width: 360px;
+  text-align: center;
+  line-height: var(--line-height-relaxed);
+}
+
+.initForm {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.initInput {
+  height: 36px;
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  width: 240px;
+}
+
+.initInput:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}
+
+.initButton {
+  height: 36px;
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--accent);
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--transition-base);
+}
+
+.initButton:hover {
+  background-color: var(--accent-hover);
+}
+
+.initButton:active {
+  background-color: var(--accent-active);
+}

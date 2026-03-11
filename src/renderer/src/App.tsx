@@ -1,13 +1,21 @@
+import { useEffect } from 'react'
+import { useTaskStore } from '@renderer/stores/task-store'
+import { AppShell } from '@renderer/components/layout'
+import { KanbanBoard } from '@renderer/components/board'
+import { CommandPalette } from './components/command-palette'
+
 function App(): React.JSX.Element {
+  const loadProjectState = useTaskStore((s) => s.loadProjectState)
+
+  useEffect(() => {
+    loadProjectState()
+  }, [loadProjectState])
+
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Kanban Agent</h1>
-      </header>
-      <main className="app-main">
-        <p>Welcome to Kanban Agent. Board UI coming soon.</p>
-      </main>
-    </div>
+    <AppShell>
+      <KanbanBoard />
+      <CommandPalette />
+    </AppShell>
   )
 }
 
