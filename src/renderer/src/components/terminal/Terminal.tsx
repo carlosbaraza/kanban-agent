@@ -88,9 +88,14 @@ export function Terminal({ sessionId, visible, onReady, onInput }: TerminalProps
       // Shift+Enter: xterm.js 6.0 doesn't support the kitty keyboard protocol,
       // so it sends plain \r for both Enter and Shift+Enter. Intercept Shift+Enter
       // and manually send the CSI u escape sequence that Claude Code expects.
-      // Only handle keydown to avoid sending the sequence twice.
-      if (e.key === 'Enter' && e.shiftKey && e.type === 'keydown') {
-        window.api.ptyWrite(sessionId, '\x1b[13;2u')
+      // IMPORTANT: Return false for ALL event types (keydown, keypress, keyup).
+      // xterm.js fires both keydown and keypress for Enter. If we only block keydown,
+      // _keyDownHandled stays false and _keyPress still processes the event, leaking
+      // a plain \r to the PTY alongside our CSI u sequence.
+      if (e.key === 'Enter' && e.shiftKey) {
+        if (e.type === 'keydown') {
+          window.api.ptyWrite(sessionId, '\x1b[13;2u')
+        }
         return false
       }
 

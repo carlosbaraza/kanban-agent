@@ -188,6 +188,30 @@ describe('Terminal', () => {
     expect(handler({ key: 'a', shiftKey: false })).toBe(true)
   })
 
+  it('sends CSI u for Shift+Enter on keydown and blocks ALL event types', () => {
+    render(<Terminal sessionId="test-session" />)
+
+    const handler = mockAttachCustomKeyEventHandler.mock.calls[0][0]
+
+    // Shift+Enter keydown: should send CSI u and return false
+    expect(handler({ key: 'Enter', shiftKey: true, type: 'keydown' })).toBe(false)
+    expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '\x1b[13;2u')
+
+    mockApi.ptyWrite.mockClear()
+
+    // Shift+Enter keypress: should return false WITHOUT sending CSI u again
+    // This prevents xterm from sending a duplicate \r via _keyPress
+    expect(handler({ key: 'Enter', shiftKey: true, type: 'keypress' })).toBe(false)
+    expect(mockApi.ptyWrite).not.toHaveBeenCalled()
+
+    // Shift+Enter keyup: should also return false
+    expect(handler({ key: 'Enter', shiftKey: true, type: 'keyup' })).toBe(false)
+    expect(mockApi.ptyWrite).not.toHaveBeenCalled()
+
+    // Plain Enter should return true (let xterm handle normally)
+    expect(handler({ key: 'Enter', shiftKey: false, type: 'keydown' })).toBe(true)
+  })
+
   it('opens URLs in default browser when clicked in terminal', () => {
     render(<Terminal sessionId="test-session" />)
 
