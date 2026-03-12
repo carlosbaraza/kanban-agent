@@ -5,6 +5,7 @@ import type { Task, TaskStatus, Priority, AgentStatus } from '@shared/types'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
+import { useBoardStore } from '@renderer/stores/board-store'
 import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
@@ -57,10 +58,10 @@ export function TaskCard({
 
   const { updateTask, deleteTask } = useTaskStore()
   const contextMenu = useContextMenu()
-  const hasUnread = useNotificationStore((s) =>
-    s.notifications.some((n) => !n.read && n.taskId === task.id)
-  )
+  const notifications = useNotificationStore((s) => s.notifications)
+  const hasUnread = notifications.some((n) => !n.read && n.taskId === task.id)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
+  const selectedTaskIds = useBoardStore((s) => s.selectedTaskIds)
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -119,6 +120,23 @@ export function TaskCard({
     navigator.clipboard.writeText(task.id)
   }, [task.id])
 
+  const handleMarkAsRead = useCallback(() => {
+    // If multiple cards are selected and this card is among them, mark all selected as read
+    if (isMultiSelected && selectedTaskIds.size > 1) {
+      for (const id of selectedTaskIds) {
+        markReadByTaskId(id)
+      }
+    } else {
+      markReadByTaskId(task.id)
+    }
+  }, [isMultiSelected, selectedTaskIds, markReadByTaskId, task.id])
+
+  // Check if any of the selected tasks (or this task) have unread notifications
+  const hasUnreadInSelection =
+    isMultiSelected && selectedTaskIds.size > 1
+      ? notifications.some((n) => !n.read && n.taskId && selectedTaskIds.has(n.taskId))
+      : hasUnread
+
   const contextMenuItems: ContextMenuItem[] = [
     {
       label: 'Move to Todo',
@@ -157,6 +175,19 @@ export function TaskCard({
       shortcut: '4'
     },
     { label: '', onClick: () => {}, divider: true },
+    ...(hasUnreadInSelection
+      ? [
+          {
+            label:
+              isMultiSelected && selectedTaskIds.size > 1
+                ? `Mark ${selectedTaskIds.size} as Read`
+                : 'Mark as Read',
+            onClick: handleMarkAsRead,
+            shortcut: ''
+          },
+          { label: '', onClick: () => {}, divider: true } as ContextMenuItem
+        ]
+      : []),
     {
       label: 'Copy ID',
       onClick: handleCopyId,
