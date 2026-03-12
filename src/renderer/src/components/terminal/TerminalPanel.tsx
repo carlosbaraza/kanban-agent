@@ -371,6 +371,9 @@ const panelStyles: Record<string, React.CSSProperties> = {
     flexShrink: 0
   },
   snippetButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
     padding: '3px 10px',
     fontSize: '12px',
     fontWeight: 500,

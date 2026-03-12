@@ -81,6 +81,7 @@ export function SnippetSettingsModal({
       const settings: ProjectSettings = await window.api.readSettings()
       settings.snippets = valid
       await window.api.writeSettings(settings)
+      window.dispatchEvent(new CustomEvent('snippets-updated', { detail: valid }))
       onSave(valid)
     } catch (err) {
       console.error('Failed to save snippet settings:', err)
@@ -154,17 +155,15 @@ export function SnippetSettingsModal({
                     <span style={styles.checkboxText}>Auto-run</span>
                   </label>
                 </Tooltip>
+                <div
+                  style={styles.advancedToggle}
+                  onClick={() => toggleAdvanced(i)}
+                >
+                  {expandedAdvanced.has(i) ? '▾' : '▸'} Advanced
+                </div>
                 <button style={styles.removeButton} onClick={() => handleRemove(i)} title="Remove">
                   &times;
                 </button>
-              </div>
-
-              {/* Advanced toggle */}
-              <div
-                style={styles.advancedToggle}
-                onClick={() => toggleAdvanced(i)}
-              >
-                {expandedAdvanced.has(i) ? '▾' : '▸'} Advanced
               </div>
 
               {expandedAdvanced.has(i) && (
@@ -252,7 +251,7 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 9999
   },
   modal: {
-    width: '580px',
+    width: '720px',
     maxHeight: '80vh',
     backgroundColor: 'var(--bg-surface)',
     border: '1px solid var(--border)',
@@ -371,6 +370,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '16px',
     cursor: 'pointer',
     padding: '0 4px',
+    marginLeft: '4px',
     lineHeight: 1,
     flexShrink: 0
   },
@@ -378,9 +378,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '11px',
     color: 'var(--text-tertiary)',
     cursor: 'pointer',
-    paddingLeft: '2px',
+    marginLeft: '8px',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    userSelect: 'none'
+    userSelect: 'none',
+    flexShrink: 0,
+    whiteSpace: 'nowrap'
   },
   advancedPanel: {
     display: 'flex',
