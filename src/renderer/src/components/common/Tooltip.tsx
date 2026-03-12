@@ -20,7 +20,7 @@ export function Tooltip({
   children,
   content,
   placement = 'top',
-  delay = 400,
+  delay = 150,
   disabled = false
 }: TooltipProps): React.JSX.Element {
   const [visible, setVisible] = useState(false)

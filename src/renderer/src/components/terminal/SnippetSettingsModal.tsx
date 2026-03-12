@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { Tooltip } from '@renderer/components/common'
 import type { Snippet, ProjectSettings } from '@shared/types'
 
 interface SnippetSettingsModalProps {
@@ -73,14 +74,19 @@ export function SnippetSettingsModal({
                 value={snippet.command}
                 onChange={(e) => handleChange(i, 'command', e.target.value)}
               />
-              <label style={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={snippet.pressEnter}
-                  onChange={(e) => handleChange(i, 'pressEnter', e.target.checked)}
-                />
-                <span style={styles.checkboxText}>Enter</span>
-              </label>
+              <Tooltip
+                placement="top"
+                content="When checked, the command runs immediately. Otherwise it's pasted for you to review first."
+              >
+                <label style={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={snippet.pressEnter}
+                    onChange={(e) => handleChange(i, 'pressEnter', e.target.checked)}
+                  />
+                  <span style={styles.checkboxText}>Auto-run</span>
+                </label>
+              </Tooltip>
               <button style={styles.removeButton} onClick={() => handleRemove(i)} title="Remove">
                 &times;
               </button>

@@ -214,11 +214,11 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
                 >
                   {snippet.command}
                 </code>
-                {snippet.pressEnter && (
-                  <div style={{ marginTop: 4, fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                    Auto-sends Enter
-                  </div>
-                )}
+                <div style={{ marginTop: 4, fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  {snippet.pressEnter
+                    ? 'Runs immediately (Enter is sent automatically)'
+                    : 'Pastes command only (you press Enter to run)'}
+                </div>
               </div>
             }
           >
@@ -230,26 +230,28 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
             </button>
           </Tooltip>
         ))}
-        <button
-          style={panelStyles.gearButton}
-          onClick={() => setShowSnippetSettings(true)}
-          title="Configure snippets"
-        >
-          &#9881;
-        </button>
+        <Tooltip placement="bottom" content="Configure snippet buttons">
+          <button
+            style={panelStyles.gearButton}
+            onClick={() => setShowSnippetSettings(true)}
+          >
+            &#9881;
+          </button>
+        </Tooltip>
         <div style={{ flex: 1 }} />
-        <button
-          style={{
-            ...panelStyles.snippetButton,
-            ...panelStyles.stopButton,
-            ...(isStopping ? { opacity: 0.5, cursor: 'not-allowed' } : {})
-          }}
-          onClick={handleStopAgent}
-          disabled={isStopping}
-          title="Stop agent and kill tmux session"
-        >
-          {isStopping ? 'Stopping...' : 'Stop Agent'}
-        </button>
+        <Tooltip placement="bottom" content="Terminate the running agent and kill the tmux session">
+          <button
+            style={{
+              ...panelStyles.snippetButton,
+              ...panelStyles.stopButton,
+              ...(isStopping ? { opacity: 0.5, cursor: 'not-allowed' } : {})
+            }}
+            onClick={handleStopAgent}
+            disabled={isStopping}
+          >
+            {isStopping ? 'Stopping...' : 'Stop Agent'}
+          </button>
+        </Tooltip>
       </div>
       <div style={panelStyles.terminalArea}>
         <Terminal sessionId={sessionId} />
