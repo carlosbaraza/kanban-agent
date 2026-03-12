@@ -1,3 +1,4 @@
+export { ErrorBoundary } from './ErrorBoundary'
 export { ContextMenu } from './ContextMenu'
 export type { ContextMenuItem, ContextMenuProps } from './ContextMenu'
 export { EmptyState } from './EmptyState'
