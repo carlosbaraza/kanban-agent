@@ -132,6 +132,11 @@ body,
   overflow: hidden;
 }
 
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
@@ -255,7 +260,8 @@ pre {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background-color: var(--bg-primary);
 }
 
