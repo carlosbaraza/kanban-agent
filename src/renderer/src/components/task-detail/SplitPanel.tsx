@@ -4,18 +4,18 @@ import styles from './SplitPanel.module.css'
 interface SplitPanelProps {
   left: React.ReactNode
   right: React.ReactNode
-  defaultLeftWidth?: number // percentage, default 50
-  minLeftWidth?: number // percentage, default 20
-  maxLeftWidth?: number // percentage, default 80
+  defaultLeftWidth?: number // pixels, default 400
+  minLeftWidth?: number // pixels, default 200
+  maxLeftWidth?: number // pixels, default 800
   onWidthChange?: (width: number) => void
 }
 
 export function SplitPanel({
   left,
   right,
-  defaultLeftWidth = 50,
-  minLeftWidth = 20,
-  maxLeftWidth = 80,
+  defaultLeftWidth = 400,
+  minLeftWidth = 200,
+  maxLeftWidth = 800,
   onWidthChange
 }: SplitPanelProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -34,8 +34,7 @@ export function SplitPanel({
       if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
       const x = e.clientX - rect.left
-      const pct = (x / rect.width) * 100
-      const clamped = Math.max(minLeftWidth, Math.min(maxLeftWidth, pct))
+      const clamped = Math.max(minLeftWidth, Math.min(maxLeftWidth, x))
       setLeftWidth(clamped)
       onWidthChange?.(clamped)
     }
@@ -60,7 +59,7 @@ export function SplitPanel({
 
   return (
     <div className={styles.container} ref={containerRef} data-testid="split-panel">
-      <div className={styles.left} style={{ width: `${leftWidth}%` }} data-testid="split-left">
+      <div className={styles.left} style={{ width: `${leftWidth}px`, maxWidth: '50%' }} data-testid="split-left">
         {left}
       </div>
       <div

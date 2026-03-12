@@ -69,8 +69,8 @@ export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX
           <TerminalPanel taskId={taskId} />
         }
         defaultLeftWidth={editorPanelWidth}
-        minLeftWidth={20}
-        maxLeftWidth={80}
+        minLeftWidth={200}
+        maxLeftWidth={800}
         onWidthChange={setEditorPanelWidth}
       />
     </div>

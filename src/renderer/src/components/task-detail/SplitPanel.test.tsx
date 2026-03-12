@@ -11,20 +11,22 @@ describe('SplitPanel', () => {
     expect(getByText('Right Content')).toBeDefined()
   })
 
-  it('applies default left width of 50%', () => {
+  it('applies default left width of 400px capped at 50%', () => {
     const { getByTestId } = render(
       <SplitPanel left={<div>L</div>} right={<div>R</div>} />
     )
     const leftPanel = getByTestId('split-left')
-    expect(leftPanel.style.width).toBe('50%')
+    expect(leftPanel.style.width).toBe('400px')
+    expect(leftPanel.style.maxWidth).toBe('50%')
   })
 
   it('applies custom default left width', () => {
     const { getByTestId } = render(
-      <SplitPanel left={<div>L</div>} right={<div>R</div>} defaultLeftWidth={30} />
+      <SplitPanel left={<div>L</div>} right={<div>R</div>} defaultLeftWidth={300} />
     )
     const leftPanel = getByTestId('split-left')
-    expect(leftPanel.style.width).toBe('30%')
+    expect(leftPanel.style.width).toBe('300px')
+    expect(leftPanel.style.maxWidth).toBe('50%')
   })
 
   it('renders the drag handle with separator role', () => {
@@ -62,8 +64,8 @@ describe('SplitPanel', () => {
       <SplitPanel
         left={<div>L</div>}
         right={<div>R</div>}
-        minLeftWidth={30}
-        maxLeftWidth={70}
+        minLeftWidth={300}
+        maxLeftWidth={700}
         onWidthChange={onWidthChange}
       />
     )
@@ -85,17 +87,17 @@ describe('SplitPanel', () => {
 
     fireEvent.mouseDown(handle)
 
-    // Move to 10% (should be clamped to 30%)
+    // Move to 100px (should be clamped to 300px)
     fireEvent.mouseMove(document, { clientX: 100 })
-    expect(onWidthChange).toHaveBeenLastCalledWith(30)
+    expect(onWidthChange).toHaveBeenLastCalledWith(300)
 
-    // Move to 90% (should be clamped to 70%)
+    // Move to 900px (should be clamped to 700px)
     fireEvent.mouseMove(document, { clientX: 900 })
-    expect(onWidthChange).toHaveBeenLastCalledWith(70)
+    expect(onWidthChange).toHaveBeenLastCalledWith(700)
 
-    // Move to 50% (should be exact)
+    // Move to 500px (should be exact)
     fireEvent.mouseMove(document, { clientX: 500 })
-    expect(onWidthChange).toHaveBeenLastCalledWith(50)
+    expect(onWidthChange).toHaveBeenLastCalledWith(500)
 
     fireEvent.mouseUp(document)
   })

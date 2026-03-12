@@ -29,7 +29,7 @@ interface UIState {
   focusedTaskIndex: number
 
   // Split panel
-  editorPanelWidth: number // percentage 0-100
+  editorPanelWidth: number // pixels
 
   // Actions
   toggleSidebar: () => void
@@ -48,7 +48,9 @@ interface UIState {
 const DEFAULT_SIDEBAR_WIDTH = 240
 const MIN_SIDEBAR_WIDTH = 180
 const MAX_SIDEBAR_WIDTH = 480
-const DEFAULT_EDITOR_PANEL_WIDTH = 50
+const DEFAULT_EDITOR_PANEL_WIDTH = 400
+const MIN_EDITOR_PANEL_WIDTH = 200
+const MAX_EDITOR_PANEL_WIDTH = 800
 
 const defaultFilters: TaskFilters = {
   search: '',
@@ -119,5 +121,5 @@ export const useUIStore = create<UIState>((set) => ({
     set({ focusedTaskIndex: index }),
 
   setEditorPanelWidth: (width: number) =>
-    set({ editorPanelWidth: Math.max(20, Math.min(80, width)) })
+    set({ editorPanelWidth: Math.max(MIN_EDITOR_PANEL_WIDTH, Math.min(MAX_EDITOR_PANEL_WIDTH, width)) })
 }))

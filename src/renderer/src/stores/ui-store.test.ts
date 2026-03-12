@@ -18,7 +18,7 @@ describe('useUIStore', () => {
       },
       focusedColumnIndex: 0,
       focusedTaskIndex: 0,
-      editorPanelWidth: 50
+      editorPanelWidth: 400
     })
   })
 
@@ -110,19 +110,19 @@ describe('useUIStore', () => {
   })
 
   describe('setEditorPanelWidth', () => {
-    it('clamps to minimum 20', () => {
-      useUIStore.getState().setEditorPanelWidth(5)
-      expect(useUIStore.getState().editorPanelWidth).toBe(20)
+    it('clamps to minimum 200px', () => {
+      useUIStore.getState().setEditorPanelWidth(50)
+      expect(useUIStore.getState().editorPanelWidth).toBe(200)
     })
 
-    it('clamps to maximum 80', () => {
-      useUIStore.getState().setEditorPanelWidth(95)
-      expect(useUIStore.getState().editorPanelWidth).toBe(80)
+    it('clamps to maximum 800px', () => {
+      useUIStore.getState().setEditorPanelWidth(1200)
+      expect(useUIStore.getState().editorPanelWidth).toBe(800)
     })
 
     it('accepts valid values within range', () => {
-      useUIStore.getState().setEditorPanelWidth(60)
-      expect(useUIStore.getState().editorPanelWidth).toBe(60)
+      useUIStore.getState().setEditorPanelWidth(500)
+      expect(useUIStore.getState().editorPanelWidth).toBe(500)
     })
   })
 })
