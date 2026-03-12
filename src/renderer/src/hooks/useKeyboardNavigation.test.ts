@@ -109,12 +109,56 @@ describe('useKeyboardNavigation', () => {
     expect(useUIStore.getState().focusedTaskIndex).toBe(0)
   })
 
-  it('k does not go below 0', () => {
+  it('k does not go below 0 without onFocusInput', () => {
     renderHook(() =>
       useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
     )
 
     act(() => fireKey('k'))
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+  })
+
+  it('k at index 0 calls onFocusInput when provided', () => {
+    const onFocusInput = vi.fn()
+    renderHook(() =>
+      useKeyboardNavigation({
+        tasksByStatus,
+        columnOrder: COLUMN_ORDER,
+        onFocusInput
+      })
+    )
+
+    act(() => fireKey('k'))
+    expect(onFocusInput).toHaveBeenCalledWith(0)
+  })
+
+  it('ArrowUp at index 0 calls onFocusInput when provided', () => {
+    const onFocusInput = vi.fn()
+    renderHook(() =>
+      useKeyboardNavigation({
+        tasksByStatus,
+        columnOrder: COLUMN_ORDER,
+        onFocusInput
+      })
+    )
+
+    act(() => fireKey('ArrowUp'))
+    expect(onFocusInput).toHaveBeenCalledWith(0)
+  })
+
+  it('ArrowUp at index > 0 does not call onFocusInput', () => {
+    const onFocusInput = vi.fn()
+    useUIStore.setState({ focusedTaskIndex: 1 })
+    renderHook(() =>
+      useKeyboardNavigation({
+        tasksByStatus,
+        columnOrder: COLUMN_ORDER,
+        onFocusInput
+      })
+    )
+
+    act(() => fireKey('ArrowUp'))
+    expect(onFocusInput).not.toHaveBeenCalled()
     expect(useUIStore.getState().focusedTaskIndex).toBe(0)
   })
 

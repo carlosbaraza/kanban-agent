@@ -15,7 +15,7 @@ interface KanbanColumnProps {
   tasks: Task[]
   onTaskClick: (taskId: string) => void
   onMultiSelect: (taskId: string, append: boolean) => void
-  onCreateTask: (title: string, document?: string) => void
+  onCreateTask: (title: string, document?: string, enabledSnippets?: Snippet[]) => void
   selectedTaskId?: string | null
   multiSelectedIds?: Set<string>
   draggedTaskId?: string | null
@@ -26,7 +26,9 @@ interface KanbanColumnProps {
   onCreateInputShown?: () => void
   headerAction?: React.ReactNode
   dashboardSnippets?: Snippet[]
+  allSnippets?: Snippet[]
   alwaysShowInput?: boolean
+  onInputExit?: () => void
 }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -53,10 +55,16 @@ export function KanbanColumn({
   onCreateInputShown,
   headerAction,
   dashboardSnippets = [],
-  alwaysShowInput = false
+  allSnippets = [],
+  alwaysShowInput = false,
+  onInputExit
 }: KanbanColumnProps): React.JSX.Element {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [enabledSnippetIndices, setEnabledSnippetIndices] = useState<Set<number>>(() => {
+    // All snippets enabled by default
+    return new Set(allSnippets.map((_, i) => i))
+  })
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const contextMenu = useContextMenu()
 
@@ -66,6 +74,23 @@ export function KanbanColumn({
   })
 
   const taskIds = tasks.map((t) => t.id)
+
+  // Sync enabled snippet indices when allSnippets length changes
+  useEffect(() => {
+    setEnabledSnippetIndices(new Set(allSnippets.map((_, i) => i)))
+  }, [allSnippets.length])
+
+  const toggleSnippet = useCallback((index: number) => {
+    setEnabledSnippetIndices((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }, [])
 
   // Show create input when triggered externally (keyboard shortcut)
   useEffect(() => {
@@ -92,6 +117,19 @@ export function KanbanColumn({
     return () => window.removeEventListener('focus-new-task-input', handleFocus)
   }, [alwaysShowInput])
 
+  // Listen for focus-column-input event (triggered by ArrowUp from first task)
+  useEffect(() => {
+    if (!alwaysShowInput && !isCreating) return
+    const handleFocusColumn = (e: Event): void => {
+      const detail = (e as CustomEvent<{ status: string }>).detail
+      if (detail.status === status) {
+        inputRef.current?.focus()
+      }
+    }
+    window.addEventListener('focus-column-input', handleFocusColumn)
+    return () => window.removeEventListener('focus-column-input', handleFocusColumn)
+  }, [alwaysShowInput, isCreating, status])
+
   const handlePlusClick = useCallback(() => {
     setIsCreating(true)
   }, [])
@@ -116,7 +154,8 @@ export function KanbanColumn({
         const title = lines[0].trim()
         const document = lines.slice(1).join('\n').trim() || undefined
         if (title) {
-          onCreateTask(title, document)
+          const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
+          onCreateTask(title, document, enabled.length > 0 ? enabled : undefined)
           setNewTaskTitle('')
         }
       }
@@ -127,8 +166,21 @@ export function KanbanColumn({
         }
         ;(e.target as HTMLTextAreaElement).blur()
       }
+      // ArrowDown at last line: exit input and start navigating tasks
+      if (e.key === 'ArrowDown') {
+        const textarea = e.target as HTMLTextAreaElement
+        const { selectionStart, selectionEnd, value } = textarea
+        const isCollapsed = selectionStart === selectionEnd
+        const textAfterCursor = value.substring(selectionEnd)
+        const hasMoreLinesBelow = textAfterCursor.includes('\n')
+        if (isCollapsed && !hasMoreLinesBelow) {
+          e.preventDefault()
+          textarea.blur()
+          onInputExit?.()
+        }
+      }
     },
-    [newTaskTitle, onCreateTask]
+    [newTaskTitle, onCreateTask, alwaysShowInput, onInputExit]
   )
 
   const handleBlur = useCallback(() => {
@@ -236,7 +288,7 @@ export function KanbanColumn({
       </div>
 
       {(alwaysShowInput || isCreating) && (
-        <div className={styles.createArea}>
+        <div className={styles.createWidget}>
           <textarea
             ref={inputRef}
             className={styles.createInput}
@@ -247,6 +299,25 @@ export function KanbanColumn({
             onBlur={handleBlur}
             rows={1}
           />
+          {allSnippets.length > 0 && (
+            <div className={styles.snippetToggles}>
+              <span className={styles.snippetTogglesLabel}>Auto-run on create:</span>
+              {allSnippets.map((snippet, i) => (
+                <button
+                  key={i}
+                  className={`${styles.snippetToggle} ${enabledSnippetIndices.has(i) ? styles.snippetToggleOn : ''}`}
+                  onClick={() => toggleSnippet(i)}
+                  title={`${snippet.command}${enabledSnippetIndices.has(i) ? ' (enabled)' : ' (disabled)'}`}
+                  type="button"
+                >
+                  <span className={styles.snippetToggleCheck}>
+                    {enabledSnippetIndices.has(i) ? '✓' : ''}
+                  </span>
+                  {snippet.title}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

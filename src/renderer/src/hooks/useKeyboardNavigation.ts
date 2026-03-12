@@ -8,12 +8,14 @@ interface UseKeyboardNavigationOptions {
   tasksByStatus: Record<string, Task[]>
   columnOrder: TaskStatus[]
   onCreateTask?: (columnIndex: number) => void
+  onFocusInput?: (columnIndex: number) => void
 }
 
 export function useKeyboardNavigation({
   tasksByStatus,
   columnOrder,
-  onCreateTask
+  onCreateTask,
+  onFocusInput
 }: UseKeyboardNavigationOptions): void {
   const {
     focusedColumnIndex,
@@ -71,9 +73,11 @@ export function useKeyboardNavigation({
 
         case 'k':
         case 'ArrowUp': {
-          // Move up within column
+          // Move up within column, or focus input when at top
           e.preventDefault()
-          if (currentTasks.length > 0) {
+          if (focusedTaskIndex === 0 && onFocusInput) {
+            onFocusInput(focusedColumnIndex)
+          } else if (currentTasks.length > 0) {
             const prev = Math.max(focusedTaskIndex - 1, 0)
             setFocusedTask(prev)
           }
@@ -201,6 +205,7 @@ export function useKeyboardNavigation({
     deleteTasks,
     getFocusedTask,
     onCreateTask,
+    onFocusInput,
     selectedTaskIds,
     clearSelection
   ])

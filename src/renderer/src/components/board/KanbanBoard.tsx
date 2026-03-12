@@ -151,10 +151,18 @@ export function KanbanBoard(): React.JSX.Element {
     setCreateColumnIndex(colIndex)
   }, [])
 
+  const handleFocusInput = useCallback((colIndex: number) => {
+    const status = columnOrder[colIndex]
+    if (status) {
+      window.dispatchEvent(new CustomEvent('focus-column-input', { detail: { status } }))
+    }
+  }, [columnOrder])
+
   useKeyboardNavigation({
     tasksByStatus,
     columnOrder,
-    onCreateTask: handleKeyboardCreate
+    onCreateTask: handleKeyboardCreate,
+    onFocusInput: handleFocusInput
   })
 
   // Marquee (lasso) selection
@@ -193,10 +201,26 @@ export function KanbanBoard(): React.JSX.Element {
   )
 
   const handleCreateTask = useCallback(
-    async (status: TaskStatus, title: string, document?: string) => {
+    async (status: TaskStatus, title: string, document?: string, enabledSnippets?: Snippet[]) => {
       const task = await addTask(title, { status })
       if (document) {
         await window.api.writeTaskDocument(task.id, document)
+      }
+      // Auto-run enabled snippets 5 seconds after creation
+      if (enabledSnippets && enabledSnippets.length > 0) {
+        const taskId = task.id
+        // Warmup tmux session immediately so it's ready
+        window.api.warmupTmuxSession(taskId).catch(() => {})
+        setTimeout(async () => {
+          const sessionName = `familiar-${taskId}`
+          for (const snippet of enabledSnippets) {
+            try {
+              await window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter)
+            } catch {
+              // Session may not be ready — skip
+            }
+          }
+        }, 5000)
       }
     },
     [addTask]
@@ -417,9 +441,10 @@ export function KanbanBoard(): React.JSX.Element {
               status={status}
               tasks={tasksByStatus[status] ?? []}
               dashboardSnippets={dashboardSnippets}
+              allSnippets={snippets}
               onTaskClick={handleTaskClick}
               onMultiSelect={handleMultiSelect}
-              onCreateTask={(title, document) => handleCreateTask(status, title, document)}
+              onCreateTask={(title, document, enabledSnippets) => handleCreateTask(status, title, document, enabledSnippets)}
               selectedTaskId={activeTaskId}
               multiSelectedIds={selectedTaskIds}
               draggedTaskId={activeTask?.id ?? null}
@@ -431,6 +456,10 @@ export function KanbanBoard(): React.JSX.Element {
               alwaysShowInput={status === 'todo'}
               showCreateInput={createColumnIndex === colIndex}
               onCreateInputShown={() => setCreateColumnIndex(null)}
+              onInputExit={() => {
+                useUIStore.getState().setFocusedColumn(colIndex)
+                useUIStore.getState().setFocusedTask(0)
+              }}
               headerAction={
                 status === 'done' && (tasksByStatus['done'] ?? []).length > 0 ? (
                   <button
