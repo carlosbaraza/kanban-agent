@@ -674,6 +674,24 @@ describe('useTaskStore', () => {
         useTaskStore.getState().reorderTask('tsk_x', 0)
       ).rejects.toThrow('Project not initialized')
     })
+
+    it('keeps card in place when reordered to its current position', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'todo', sortOrder: 2 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Reorder tsk_b to index 1 (its current position in the filtered list)
+      await useTaskStore.getState().reorderTask('tsk_b', 1)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(1)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(2)
+    })
   })
 
   describe('updateProjectLabels', () => {

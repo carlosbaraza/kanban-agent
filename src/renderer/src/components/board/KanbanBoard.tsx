@@ -431,7 +431,20 @@ export function KanbanBoard(): React.JSX.Element {
         clearSelection()
       } else {
         if (sourceColumn === targetStatus) {
-          await reorderTask(activeId, targetIndex)
+          // The drop indicator index is relative to the full list (including
+          // the dragged card), but reorderTask removes the card first then
+          // inserts at the given index.  When the card's current position is
+          // above the target, all subsequent indices shift down by one after
+          // removal, so we must adjust.
+          const colTasks = tasksByStatus[sourceColumn] ?? []
+          const currentIndex = colTasks.findIndex((t) => t.id === activeId)
+          let adjustedIndex = targetIndex
+          if (currentIndex >= 0 && currentIndex < targetIndex) {
+            adjustedIndex = targetIndex - 1
+          }
+          // Skip no-op reorder (card dropped in its original position)
+          if (currentIndex === adjustedIndex) return
+          await reorderTask(activeId, adjustedIndex)
         } else {
           await moveTask(activeId, targetStatus, targetIndex)
         }
