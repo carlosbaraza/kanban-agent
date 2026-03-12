@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Task } from '@shared/types'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useNotificationStore } from '@renderer/stores/notification-store'
 import { TaskDetailHeader } from './TaskDetailHeader'
 import { TaskDetailContent } from './TaskDetailContent'
 import styles from './TaskDetail.module.css'
@@ -14,6 +15,12 @@ interface TaskDetailProps {
 export function TaskDetail({ taskId, onClose }: TaskDetailProps): React.JSX.Element {
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
+  const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
+
+  // Clear notifications when task is opened
+  useEffect(() => {
+    markReadByTaskId(taskId)
+  }, [taskId, markReadByTaskId])
 
   // Close on Escape key
   useEffect(() => {
