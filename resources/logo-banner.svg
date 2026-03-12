@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" fill="none">
+  <defs>
+    <linearGradient id="bannerBg" x1="0" y1="0" x2="800" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F0F23"/>
+      <stop offset="100%" stop-color="#1A1A2E"/>
+    </linearGradient>
+    <linearGradient id="iconBg" x1="20" y1="20" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="200" y1="60" x2="780" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0E7FF"/>
+      <stop offset="100%" stop-color="#C7D2FE"/>
+    </linearGradient>
+    <linearGradient id="cardFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.28)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.12)"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="800" height="200" rx="16" fill="url(#bannerBg)"/>
+
+  <!-- Icon -->
+  <g transform="translate(20, 20)">
+    <rect width="160" height="160" rx="36" fill="url(#iconBg)"/>
+    <rect width="160" height="160" rx="36" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1.5"/>
+
+    <!-- Column 1 -->
+    <rect x="20" y="24" width="32" height="18" rx="4" fill="url(#cardFill)"/>
+    <rect x="20" y="47" width="32" height="24" rx="4" fill="url(#cardFill)"/>
+    <rect x="20" y="76" width="32" height="14" rx="4" fill="url(#cardFill)"/>
+
+    <!-- Column 2 -->
+    <rect x="58" y="24" width="40" height="22" rx="4" fill="url(#cardFill)"/>
+    <rect x="58" y="51" width="40" height="30" rx="4" fill="url(#cardFill)"/>
+
+    <!-- Column 3 -->
+    <rect x="104" y="24" width="36" height="28" rx="4" fill="url(#cardFill)"/>
+    <rect x="104" y="57" width="36" height="18" rx="4" fill="rgba(255,255,255,0.4)"/>
+
+    <!-- Terminal -->
+    <rect x="32" y="104" width="96" height="40" rx="8" fill="rgba(0,0,0,0.35)"/>
+    <rect x="32" y="104" width="96" height="40" rx="8" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <circle cx="42" cy="111" r="2.5" fill="#FF5F57"/>
+    <circle cx="50" cy="111" r="2.5" fill="#FEBC2E"/>
+    <circle cx="58" cy="111" r="2.5" fill="#28C840"/>
+    <rect x="40" y="120" width="20" height="3" rx="1.5" fill="#A78BFA"/>
+    <rect x="63" y="120" width="40" height="3" rx="1.5" fill="rgba(255,255,255,0.4)"/>
+    <rect x="40" y="128" width="14" height="3" rx="1.5" fill="#34D399"/>
+    <rect x="57" y="128" width="50" height="3" rx="1.5" fill="rgba(255,255,255,0.35)"/>
+    <rect x="40" y="136" width="4" height="6" rx="1" fill="#A78BFA"/>
+  </g>
+
+  <!-- Text: Kanban Agent -->
+  <text x="210" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="64" font-weight="700" letter-spacing="-2" fill="url(#textGrad)">
+    Kanban Agent
+  </text>
+
+  <!-- Subtle tagline -->
+  <text x="214" y="152" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="16" font-weight="400" fill="rgba(167,139,250,0.7)">
+    AI-powered kanban for agentic coding workflows
+  </text>
+</svg>
