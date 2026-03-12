@@ -19,7 +19,8 @@ const mockApi = {
   cliCheckAvailable: vi.fn().mockResolvedValue(true),
   cliInstallToPath: vi.fn().mockResolvedValue({ success: true, shell: 'zsh' }),
   readSettings: vi.fn().mockResolvedValue({ codingAgent: 'claude-code' }),
-  writeSettings: vi.fn().mockResolvedValue(undefined)
+  writeSettings: vi.fn().mockResolvedValue(undefined),
+  watchProjectDir: vi.fn().mockReturnValue(vi.fn())
 }
 
 ;(window as any).api = mockApi

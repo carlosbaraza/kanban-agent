@@ -35,7 +35,13 @@ vi.mock('@renderer/components/common', () => ({
 
 const mockApi = {
   getProjectRoot: vi.fn().mockResolvedValue('/tmp/project'),
-  openPath: vi.fn().mockResolvedValue(undefined)
+  openPath: vi.fn().mockResolvedValue(undefined),
+  readSettings: vi.fn().mockResolvedValue({ labels: [
+    { name: 'bug', color: '#ef4444' },
+    { name: 'feature', color: '#3b82f6' },
+    { name: 'chore', color: '#6b7280' }
+  ] }),
+  watchProjectDir: vi.fn().mockReturnValue(vi.fn())
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {

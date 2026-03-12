@@ -4,7 +4,8 @@ import { LabelSelect } from './LabelSelect'
 
 const mockApi = {
   readSettings: vi.fn(),
-  writeSettings: vi.fn().mockResolvedValue(undefined)
+  writeSettings: vi.fn().mockResolvedValue(undefined),
+  watchProjectDir: vi.fn().mockReturnValue(vi.fn())
 }
 
 ;(window as any).api = mockApi
