@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Priority } from '@shared/types'
 import { PriorityIcon } from '@renderer/components/common'
+import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import styles from './PrioritySelect.module.css'
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
@@ -21,6 +22,8 @@ interface PrioritySelectProps {
 export function PrioritySelect({ value, onChange }: PrioritySelectProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  useDropdownPosition(dropdownRef, open)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
@@ -41,7 +44,7 @@ export function PrioritySelect({ value, onChange }: PrioritySelectProps): React.
         {PRIORITY_LABELS[value]}
       </button>
       {open && (
-        <div className={styles.dropdown}>
+        <div ref={dropdownRef} className={styles.dropdown}>
           {PRIORITIES.map((p) => (
             <button
               key={p}

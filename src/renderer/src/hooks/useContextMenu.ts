@@ -22,11 +22,7 @@ export function useContextMenu(): UseContextMenuReturn {
     e.preventDefault()
     e.stopPropagation()
 
-    // Clamp to viewport bounds
-    const x = Math.min(e.clientX, window.innerWidth - 200)
-    const y = Math.min(e.clientY, window.innerHeight - 200)
-
-    setState({ isOpen: true, position: { x, y } })
+    setState({ isOpen: true, position: { x: e.clientX, y: e.clientY } })
   }, [])
 
   const close = useCallback(() => {

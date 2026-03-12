@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import styles from './LabelSelect.module.css'
 
 const PRESET_COLORS = [
@@ -25,7 +26,9 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
   const [newLabelName, setNewLabelName] = useState('')
   const [editingColor, setEditingColor] = useState<string | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  useDropdownPosition(dropdownRef, open)
 
   const projectState = useTaskStore((s) => s.projectState)
   const updateProjectLabels = useTaskStore((s) => s.updateProjectLabels)
@@ -107,7 +110,7 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
         +
       </button>
       {open && (
-        <div className={styles.dropdown}>
+        <div ref={dropdownRef} className={styles.dropdown}>
           <input
             ref={inputRef}
             className={styles.searchInput}

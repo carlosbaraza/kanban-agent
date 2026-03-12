@@ -35,48 +35,15 @@ describe('useContextMenu', () => {
     expect(result.current.position).toEqual({ x: 100, y: 200 })
   })
 
-  it('clamps x position to keep menu within viewport', () => {
-    const { result } = renderHook(() => useContextMenu())
-
-    // Click near right edge: 1024 - 200 = 824, so x should be clamped to 824
-    act(() => {
-      result.current.open(createMouseEvent(900, 100))
-    })
-
-    expect(result.current.position.x).toBe(824) // 1024 - 200
-    expect(result.current.position.y).toBe(100)
-  })
-
-  it('clamps y position to keep menu within viewport', () => {
-    const { result } = renderHook(() => useContextMenu())
-
-    // Click near bottom edge: 768 - 200 = 568, so y should be clamped to 568
-    act(() => {
-      result.current.open(createMouseEvent(100, 700))
-    })
-
-    expect(result.current.position.x).toBe(100)
-    expect(result.current.position.y).toBe(568) // 768 - 200
-  })
-
-  it('clamps both x and y when near corner', () => {
+  it('passes raw coordinates without clamping (clamping is done by ContextMenu component)', () => {
     const { result } = renderHook(() => useContextMenu())
 
     act(() => {
-      result.current.open(createMouseEvent(950, 700))
+      result.current.open(createMouseEvent(900, 700))
     })
 
-    expect(result.current.position).toEqual({ x: 824, y: 568 })
-  })
-
-  it('does not clamp when position fits within viewport', () => {
-    const { result } = renderHook(() => useContextMenu())
-
-    act(() => {
-      result.current.open(createMouseEvent(400, 300))
-    })
-
-    expect(result.current.position).toEqual({ x: 400, y: 300 })
+    // Raw coordinates passed through — the ContextMenu component handles viewport clamping
+    expect(result.current.position).toEqual({ x: 900, y: 700 })
   })
 
   it('close() sets isOpen to false but preserves position', () => {

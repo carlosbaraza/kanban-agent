@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { TaskStatus } from '@shared/types'
 import { DEFAULT_COLUMNS, COLUMN_LABELS } from '@shared/constants'
+import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import styles from './StatusSelect.module.css'
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
@@ -19,6 +20,8 @@ interface StatusSelectProps {
 export function StatusSelect({ value, onChange }: StatusSelectProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  useDropdownPosition(dropdownRef, open)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
@@ -39,7 +42,7 @@ export function StatusSelect({ value, onChange }: StatusSelectProps): React.JSX.
         {COLUMN_LABELS[value]}
       </button>
       {open && (
-        <div className={styles.dropdown}>
+        <div ref={dropdownRef} className={styles.dropdown}>
           {DEFAULT_COLUMNS.map((status) => (
             <button
               key={status}

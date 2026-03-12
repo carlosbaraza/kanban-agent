@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState, useLayoutEffect } from 'react'
 
 export interface ContextMenuItem {
   label: string
@@ -18,6 +18,22 @@ export interface ContextMenuProps {
 export function ContextMenu({ items, position, onClose }: ContextMenuProps): React.JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
   const focusedIndexRef = useRef<number>(-1)
+  const [adjustedPosition, setAdjustedPosition] = useState(position)
+
+  // Measure menu after render and clamp to viewport bounds
+  useLayoutEffect(() => {
+    const menu = menuRef.current
+    if (!menu) {
+      setAdjustedPosition(position)
+      return
+    }
+
+    const pad = 8
+    const rect = menu.getBoundingClientRect()
+    const x = Math.max(pad, Math.min(position.x, window.innerWidth - rect.width - pad))
+    const y = Math.max(pad, Math.min(position.y, window.innerHeight - rect.height - pad))
+    setAdjustedPosition({ x, y })
+  }, [position])
 
   const focusItem = useCallback(
     (index: number) => {
@@ -97,8 +113,8 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps): Rea
         ref={menuRef}
         style={{
           ...menuStyles.menu,
-          left: position.x,
-          top: position.y,
+          left: adjustedPosition.x,
+          top: adjustedPosition.y,
           pointerEvents: 'auto'
         }}
         role="menu"

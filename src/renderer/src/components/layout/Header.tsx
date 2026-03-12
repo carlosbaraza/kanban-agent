@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
+import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import type { Priority, AgentStatus } from '@shared/types'
 import styles from './Header.module.css'
 
@@ -26,6 +27,10 @@ export function Header(): React.JSX.Element {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const priorityDropdownRef = useRef<HTMLDivElement>(null)
   const agentDropdownRef = useRef<HTMLDivElement>(null)
+  const priorityMenuRef = useRef<HTMLDivElement>(null)
+  const agentMenuRef = useRef<HTMLDivElement>(null)
+  useDropdownPosition(priorityMenuRef, showPriorityDropdown)
+  useDropdownPosition(agentMenuRef, showAgentDropdown)
 
   const hasActiveFilters =
     filters.search.length > 0 ||
@@ -144,7 +149,7 @@ export function Header(): React.JSX.Element {
           </button>
 
           {showPriorityDropdown && (
-            <div className={styles.dropdown} data-testid="priority-dropdown">
+            <div ref={priorityMenuRef} className={styles.dropdown} data-testid="priority-dropdown">
               {PRIORITY_OPTIONS.map((opt) => (
                 <label key={opt.value} className={styles.dropdownItem}>
                   <input
@@ -176,7 +181,7 @@ export function Header(): React.JSX.Element {
           </button>
 
           {showAgentDropdown && (
-            <div className={styles.dropdown} data-testid="agent-dropdown">
+            <div ref={agentMenuRef} className={styles.dropdown} data-testid="agent-dropdown">
               {AGENT_STATUS_OPTIONS.map((opt) => (
                 <label key={opt.value} className={styles.dropdownItem}>
                   <input

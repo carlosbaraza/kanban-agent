@@ -5,6 +5,7 @@ import type { Task, TaskStatus, Priority, AgentStatus, Snippet, LabelConfig } fr
 import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { LucideIconByName } from '@renderer/components/terminal/IconPicker'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
+import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useBoardStore } from '@renderer/stores/board-store'
@@ -70,6 +71,8 @@ export function TaskCard({
   const contextMenu = useContextMenu()
   const [priorityOpen, setPriorityOpen] = useState(false)
   const priorityRef = useRef<HTMLButtonElement>(null)
+  const priorityDropdownRef = useRef<HTMLDivElement>(null)
+  useDropdownPosition(priorityDropdownRef, priorityOpen)
   const notifications = useNotificationStore((s) => s.notifications)
   const hasUnread = notifications.some((n) => !n.read && n.taskId === task.id)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
@@ -350,7 +353,7 @@ export function TaskCard({
           >
             <PriorityIcon priority={task.priority} size={14} />
             {priorityOpen && (
-              <div className={styles.priorityDropdown}>
+              <div ref={priorityDropdownRef} className={styles.priorityDropdown}>
                 {(['urgent', 'high', 'medium', 'low', 'none'] as Priority[]).map((p) => (
                   <button
                     key={p}
