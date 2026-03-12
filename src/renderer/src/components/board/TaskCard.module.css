@@ -37,10 +37,21 @@
   box-shadow: var(--shadow-focus);
 }
 
+.cardSelected:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+}
+
 .cardMultiSelected {
   border-color: var(--accent);
   background-color: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
   box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cardMultiSelected:hover {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
 }
 
 .cardDragging {
@@ -53,6 +64,11 @@
   border-color: var(--accent);
   background-color: var(--bg-elevated);
   box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cardFocused:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
 }
 
 .cardNotified {
