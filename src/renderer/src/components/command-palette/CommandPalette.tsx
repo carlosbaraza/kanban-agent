@@ -17,6 +17,7 @@ export function CommandPalette(): React.JSX.Element | null {
   const toggleCommandPalette = useUIStore((s) => s.toggleCommandPalette)
   const openTaskDetail = useUIStore((s) => s.openTaskDetail)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
+  const openSettings = useUIStore((s) => s.openSettings)
   const setFocusedColumn = useUIStore((s) => s.setFocusedColumn)
 
   const projectState = useTaskStore((s) => s.projectState)
@@ -93,6 +94,21 @@ export function CommandPalette(): React.JSX.Element | null {
                 <span style={styles.shortcut}>
                   <kbd style={styles.kbd}>&#8984;</kbd>
                   <kbd style={styles.kbd}>B</kbd>
+                </span>
+              </Command.Item>
+              <Command.Item
+                value="open settings preferences"
+                onSelect={() => {
+                  openSettings()
+                  handleClose()
+                }}
+                style={styles.item}
+              >
+                <span style={styles.itemIcon}>&#9881;</span>
+                <span style={styles.itemLabel}>Open Settings</span>
+                <span style={styles.shortcut}>
+                  <kbd style={styles.kbd}>&#8984;</kbd>
+                  <kbd style={styles.kbd}>,</kbd>
                 </span>
               </Command.Item>
             </Command.Group>
