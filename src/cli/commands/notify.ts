@@ -12,11 +12,12 @@ export function notifyCommand(): Command {
     .action(async (title: string, body: string | undefined, opts: { task?: string }) => {
       try {
         const root = getProjectRoot()
+        const taskId = opts.task || process.env.KANBAN_TASK_ID || undefined
         await appendNotification(root, {
           id: generateNotificationId(),
           title,
           body,
-          taskId: opts.task,
+          taskId,
           read: false,
           createdAt: new Date().toISOString()
         })

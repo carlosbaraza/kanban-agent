@@ -1,6 +1,6 @@
 {
   "name": "kanban-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A macOS Electron desktop app with kanban board, terminals, and block editor for agentic AI coding workflows",
   "main": "./out/main/index.js",
   "bin": {
@@ -20,6 +20,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "build:cli": "tsup",
+    "build:app": "npm run build && npm run build:cli && electron-builder --config electron-builder.config.js",
+    "build:app:arm64": "npm run build && npm run build:cli && electron-builder --config electron-builder.config.js --mac --arm64",
+    "build:app:x64": "npm run build && npm run build:cli && electron-builder --config electron-builder.config.js --mac --x64",
     "postinstall": "electron-rebuild -f -w node-pty || true",
     "rebuild": "electron-rebuild -f -w node-pty"
   },
@@ -48,6 +51,7 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
+    "@electron/rebuild": "^3.7.1",
     "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -57,13 +61,13 @@
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.0.18",
     "electron": "^41.0.0",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "jsdom": "^28.1.0",
     "playwright": "^1.58.2",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
-    "@electron/rebuild": "^3.7.1",
     "vitest": "^4.0.18"
   }
 }
