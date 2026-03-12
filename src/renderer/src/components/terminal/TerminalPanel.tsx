@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Terminal } from './Terminal'
-import { SnippetSettingsModal } from './SnippetSettingsModal'
 import { LucideIconByName } from './IconPicker'
 import { Tooltip } from '@renderer/components/common'
 import type { Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { TMUX_SETUP_PROMPT, DOCTOR_PROMPT, BASE_AGENTS_MD } from '@shared/prompts'
 
 interface TerminalPanelProps {
@@ -19,13 +19,13 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
   const [isStopping, setIsStopping] = useState(false)
   const [isStopped, setIsStopped] = useState(false)
   const [isRestarting, setIsRestarting] = useState(false)
-  const [showSnippetSettings, setShowSnippetSettings] = useState(false)
   const [showHelpMenu, setShowHelpMenu] = useState(false)
   const [copiedItem, setCopiedItem] = useState<string | null>(null)
   const helpMenuRef = useRef<HTMLDivElement>(null)
   const sessionIdRef = useRef<string | null>(null)
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
+  const openSettings = useUIStore((s) => s.openSettings)
 
   const createSession = useCallback(async () => {
     try {
@@ -258,10 +258,10 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
             </button>
           </Tooltip>
         ))}
-        <Tooltip placement="bottom" content="Configure snippet buttons">
+        <Tooltip placement="bottom" content="Open settings">
           <button
             style={panelStyles.gearButton}
-            onClick={() => setShowSnippetSettings(true)}
+            onClick={openSettings}
           >
             &#9881;
           </button>
@@ -331,16 +331,6 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
       <div style={panelStyles.terminalArea}>
         <Terminal sessionId={sessionId} />
       </div>
-      {showSnippetSettings && (
-        <SnippetSettingsModal
-          snippets={snippets}
-          onSave={(updated) => {
-            setSnippets(updated.length > 0 ? updated : DEFAULT_SNIPPETS)
-            setShowSnippetSettings(false)
-          }}
-          onClose={() => setShowSnippetSettings(false)}
-        />
-      )}
     </div>
   )
 }
