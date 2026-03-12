@@ -166,24 +166,24 @@ export function KanbanBoard(): React.JSX.Element {
     onFocusInput: handleFocusInput
   })
 
-  // Auto-focus the new task input when the board is the active view,
-  // but only if no card is keyboard-focused (so returning from task detail
-  // preserves the focused card for immediate re-entry with Enter).
-  // When a card IS focused, blur the active element so the browser doesn't
-  // auto-shift DOM focus to the input (which would clear keyboard nav state).
+  // When the board becomes the active view, decide where DOM focus goes:
+  // - If a card is keyboard-focused, focus the board container so the browser
+  //   doesn't auto-shift focus to the create-task input (which would clear
+  //   keyboard nav state via handleInputFocus).
+  // - If no card is focused, focus the create-task input after a short delay.
   const boardIsActive = !taskDetailOpen && !settingsOpen && !isLoading
   useEffect(() => {
-    if (boardIsActive && focusedColumnIndex < 0) {
+    if (!boardIsActive) return
+    if (focusedColumnIndex >= 0) {
+      // Grab focus on the board container (tabIndex={-1}) so the browser
+      // doesn't move it to the input when the task-detail overlay hides
+      boardElRef.current?.focus({ preventScroll: true })
+    } else {
       // Small delay to let any closing animations/transitions complete
       const timer = setTimeout(() => {
         window.dispatchEvent(new Event('focus-new-task-input'))
       }, 50)
       return () => clearTimeout(timer)
-    }
-    if (boardIsActive && focusedColumnIndex >= 0) {
-      // Remove DOM focus from any element (e.g. terminal inside task detail)
-      // so the browser doesn't auto-move it to the input when the overlay hides
-      ;(document.activeElement as HTMLElement)?.blur?.()
     }
   }, [boardIsActive, focusedColumnIndex])
 
@@ -200,9 +200,11 @@ export function KanbanBoard(): React.JSX.Element {
     onSelect: handleMarqueeSelect
   })
 
+  const boardElRef = useRef<HTMLDivElement | null>(null)
   const boardRef = useCallback(
     (node: HTMLDivElement | null) => {
       containerRef.current = node
+      boardElRef.current = node
     },
     [containerRef]
   )
@@ -486,6 +488,8 @@ export function KanbanBoard(): React.JSX.Element {
         <div
           ref={boardRef}
           className={styles.board}
+          tabIndex={-1}
+          style={{ outline: 'none' }}
           onClick={() => { if (!consumeMarqueeClick()) clearSelection() }}
           onMouseDown={handleMouseDown}
         >
