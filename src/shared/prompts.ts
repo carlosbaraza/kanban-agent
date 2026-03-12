@@ -301,6 +301,92 @@ For other AI agents, check their documentation for lifecycle hooks or event call
 - **On user message**: run \`familiar status $FAMILIAR_TASK_ID in-progress\` and \`familiar update $FAMILIAR_TASK_ID --agent-status running\`
 - **On agent stop**: run \`familiar update $FAMILIAR_TASK_ID --agent-status idle\` (do NOT change task status)
 
+### 7. Familiar agent skill
+
+Claude Code uses project-level skills in \`.claude/skills/\` to provide task-aware behavior when running inside Familiar terminals. Check if the skill is installed:
+
+\`\`\`bash
+# Check if the skill directory exists
+test -d .claude/skills/familiar-agent && echo "OK: skill directory exists" || echo "WARN: .claude/skills/familiar-agent/ not found"
+
+# Check if SKILL.md exists
+test -f .claude/skills/familiar-agent/SKILL.md && echo "OK: SKILL.md exists" || echo "WARN: .claude/skills/familiar-agent/SKILL.md not found"
+
+# Check that the skill references 'familiar agents' command
+grep -q "familiar agents" .claude/skills/familiar-agent/SKILL.md 2>/dev/null && echo "OK: skill references familiar agents" || echo "WARN: skill does not reference familiar agents command"
+\`\`\`
+
+If the skill is missing, create it:
+
+1. Create the directory: \`mkdir -p .claude/skills/familiar-agent\`
+
+2. Create \`.claude/skills/familiar-agent/SKILL.md\` with the following content:
+
+\`\`\`markdown
+---
+name: familiar-agent
+description: Use when running inside a Familiar terminal (FAMILIAR_TASK_ID is set) or when the user mentions familiar, task tracking, or updating task status. Provides workflow for reading task context, updating status, logging progress, and sending notifications via the familiar CLI.
+---
+
+# Familiar — Task Context
+
+You are running inside a **Familiar** terminal session. A task has been assigned to you.
+
+## Step 0: Load base agent instructions
+
+Run the following to get the canonical agent workflow and CLI reference:
+
+\\\`\\\`\\\`bash
+familiar agents
+\\\`\\\`\\\`
+
+Follow those instructions as your base workflow. The sections below provide additional context.
+
+## Step 1: Read your context
+
+\\\`\\\`\\\`bash
+echo "Task: $FAMILIAR_TASK_ID"
+echo "Root: $FAMILIAR_PROJECT_ROOT"
+echo "Settings: $FAMILIAR_SETTINGS_PATH"
+
+cat "$FAMILIAR_SETTINGS_PATH" 2>/dev/null || echo "{}"
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/document.md"
+cat "$FAMILIAR_PROJECT_ROOT/.familiar/tasks/$FAMILIAR_TASK_ID/task.json"
+\\\`\\\`\\\`
+
+If \\\`$FAMILIAR_TASK_ID\\\` is not set, you are not inside a Familiar terminal. Skip this skill.
+
+## Step 2: Signal you're working
+
+\\\`\\\`\\\`bash
+familiar status $FAMILIAR_TASK_ID in-progress
+familiar update $FAMILIAR_TASK_ID --agent-status running
+familiar log $FAMILIAR_TASK_ID "Starting work"
+\\\`\\\`\\\`
+
+## Step 3: Log progress at milestones
+
+\\\`\\\`\\\`bash
+familiar log $FAMILIAR_TASK_ID "Implemented X — moving to tests"
+\\\`\\\`\\\`
+
+## Step 4: Commit your work
+
+\\\`\\\`\\\`bash
+git add <changed-files>
+git commit -m "feat: <short description>"
+\\\`\\\`\\\`
+
+## Step 5: On completion
+
+\\\`\\\`\\\`bash
+familiar status $FAMILIAR_TASK_ID in-review
+familiar update $FAMILIAR_TASK_ID --agent-status done
+familiar log $FAMILIAR_TASK_ID "Complete — all tests passing"
+familiar notify "Task Done" "$FAMILIAR_TASK_ID complete"
+\\\`\\\`\\\`
+\`\`\`
+
 ## Report format
 
 After running all checks, summarize:
