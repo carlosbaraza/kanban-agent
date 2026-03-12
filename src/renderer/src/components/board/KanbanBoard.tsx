@@ -211,9 +211,20 @@ export function KanbanBoard(): React.JSX.Element {
   const handleTaskClick = useCallback(
     (taskId: string) => {
       clearSelection()
+      // Set keyboard focus to the clicked card so closing the detail view
+      // returns focus to this card regardless of how it was opened
+      for (let col = 0; col < columnOrder.length; col++) {
+        const tasks = tasksByStatus[columnOrder[col]] ?? []
+        const idx = tasks.findIndex((t) => t.id === taskId)
+        if (idx >= 0) {
+          useUIStore.getState().setFocusedColumn(col)
+          useUIStore.getState().setFocusedTask(idx)
+          break
+        }
+      }
       openTaskDetail(taskId)
     },
-    [openTaskDetail, clearSelection]
+    [openTaskDetail, clearSelection, columnOrder, tasksByStatus]
   )
 
   const handleMultiSelect = useCallback(
