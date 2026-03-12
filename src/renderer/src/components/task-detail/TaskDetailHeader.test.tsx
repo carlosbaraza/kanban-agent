@@ -208,16 +208,34 @@ describe('TaskDetailHeader', () => {
   it('opens task folder when folder button is clicked', () => {
     render(<TaskDetailHeader task={makeTask()} onUpdate={onUpdate} onClose={onClose} />)
 
-    // Find the folder button (first button with svg)
+    // Find the folder button by its SVG path content (folder icon)
     const buttons = screen.getAllByRole('button')
-    // The folder button is the one before the close button (x)
     const folderBtn = buttons.find(
-      (b) => b.querySelector('svg') !== null
+      (b) => b.querySelector('svg path[d*="folder" i], svg path[d*="H12.5"]') !== null
     )
     expect(folderBtn).toBeTruthy()
     fireEvent.click(folderBtn!)
 
     expect(mockApi.getProjectRoot).toHaveBeenCalled()
+  })
+
+  it('renders task ID badge with copy button', () => {
+    render(<TaskDetailHeader task={makeTask()} onUpdate={onUpdate} onClose={onClose} />)
+
+    expect(screen.getByText('tsk_test01')).toBeInTheDocument()
+  })
+
+  it('copies task ID to clipboard when badge is clicked', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+
+    render(<TaskDetailHeader task={makeTask()} onUpdate={onUpdate} onClose={onClose} />)
+
+    const badge = screen.getByText('tsk_test01').closest('button')
+    expect(badge).toBeTruthy()
+    fireEvent.click(badge!)
+
+    expect(writeText).toHaveBeenCalledWith('tsk_test01')
   })
 
   it('trims whitespace from title before updating', () => {

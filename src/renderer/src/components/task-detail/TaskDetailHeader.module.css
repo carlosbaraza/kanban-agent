@@ -132,6 +132,33 @@
   background-color: var(--bg-surface);
 }
 
+.taskIdBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono, 'SF Mono', 'Menlo', 'Monaco', monospace);
+  color: var(--text-tertiary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast);
+  height: 28px;
+}
+
+.taskIdBadge:hover {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  border-color: var(--border-hover, var(--border));
+}
+
+.taskIdText {
+  user-select: none;
+}
+
 .timestamps {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);

@@ -9,6 +9,60 @@ import { PrioritySelect } from './PrioritySelect'
 import { LabelSelect } from './LabelSelect'
 import styles from './TaskDetailHeader.module.css'
 
+function TaskIdBadge({ id }: { id: string }): React.JSX.Element {
+  const [copied, setCopied] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard?.writeText(id)
+    setCopied(true)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => setCopied(false), 1500)
+  }, [id])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  return (
+    <Tooltip placement="bottom" content={copied ? 'Copied!' : 'Copy task ID'}>
+      <button className={styles.taskIdBadge} onClick={handleCopy}>
+        <span className={styles.taskIdText}>{id}</span>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          {copied ? (
+            <path
+              d="M3.5 8.5L6.5 11.5L12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ) : (
+            <>
+              <rect
+                x="5.5"
+                y="5.5"
+                width="8"
+                height="8"
+                rx="1.5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+              />
+              <path
+                d="M10.5 5.5V3.5C10.5 2.67 9.83 2 9 2H3.5C2.67 2 2 2.67 2 3.5V9C2 9.83 2.67 10.5 3.5 10.5H5.5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+              />
+            </>
+          )}
+        </svg>
+      </button>
+    </Tooltip>
+  )
+}
+
 interface TaskDetailHeaderProps {
   task: Task
   onUpdate: (updates: Partial<Task>) => void
@@ -98,6 +152,7 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
           <span>Updated {formatRelativeTime(task.updatedAt)}</span>
         </div>
         <div className={styles.topBarActions}>
+          <TaskIdBadge id={task.id} />
           <Tooltip placement="bottom" content="Open task folder in Finder">
             <button
               className={styles.closeButton}
