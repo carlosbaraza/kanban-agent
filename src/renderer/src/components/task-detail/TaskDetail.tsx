@@ -60,7 +60,7 @@ export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React
       {task ? (
         <div className={styles.inner}>
           <TaskDetailHeader task={task} onUpdate={handleUpdate} onClose={onClose} />
-          <TaskDetailContent taskId={taskId} />
+          <TaskDetailContent taskId={taskId} visible={visible} />
         </div>
       ) : (
         <div className={styles.notFound}>

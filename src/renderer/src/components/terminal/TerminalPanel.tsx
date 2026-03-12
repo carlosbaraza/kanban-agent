@@ -9,9 +9,10 @@ import { useUIStore } from '@renderer/stores/ui-store'
 
 interface TerminalPanelProps {
   taskId: string
+  visible?: boolean
 }
 
-export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element {
+export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JSX.Element {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [snippets, setSnippets] = useState<Snippet[]>(DEFAULT_SNIPPETS)
@@ -256,7 +257,7 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
         </Tooltip>
       </div>
       <div style={panelStyles.terminalArea}>
-        <Terminal sessionId={sessionId} />
+        <Terminal sessionId={sessionId} visible={visible} />
       </div>
     </div>
   )

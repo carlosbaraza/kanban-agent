@@ -6,10 +6,11 @@ import '@xterm/xterm/css/xterm.css'
 
 interface TerminalProps {
   sessionId: string
+  visible?: boolean
   onReady?: () => void
 }
 
-export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Element {
+export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -179,6 +180,15 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
+
+  // Re-focus terminal when it becomes visible (e.g. task detail reopened)
+  useEffect(() => {
+    if (visible && termRef.current) {
+      requestAnimationFrame(() => {
+        termRef.current?.focus()
+      })
+    }
+  }, [visible])
 
   return (
     <div style={{ width: '100%', height: '100%', overflow: 'hidden', padding: 8 }}>
