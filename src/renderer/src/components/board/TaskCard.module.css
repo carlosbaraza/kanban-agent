@@ -316,3 +316,15 @@
   padding: 2px 5px;
 }
 
+.snippetBtnSent {
+  border-color: rgba(39, 174, 96, 0.3);
+  background-color: rgba(39, 174, 96, 0.1);
+  color: #27ae60;
+  cursor: default;
+  opacity: 0.8;
+}
+
+.snippetBtnSent:hover {
+  background-color: rgba(39, 174, 96, 0.1);
+}
+

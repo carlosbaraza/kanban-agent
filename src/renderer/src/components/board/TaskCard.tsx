@@ -148,15 +148,26 @@ export function TaskCard({
     navigator.clipboard.writeText(task.id)
   }, [task.id])
 
+  const [snippetCooldowns, setSnippetCooldowns] = useState<Record<number, boolean>>({})
+
   const handleSnippetClick = useCallback(
-    (e: React.MouseEvent, snippet: Snippet) => {
+    (e: React.MouseEvent, snippet: Snippet, index: number) => {
       e.stopPropagation()
+      if (snippetCooldowns[index]) return
       const sessionName = `kanban-${task.id}`
       window.api.tmuxSendKeys(sessionName, snippet.command, snippet.pressEnter).catch((err) => {
         console.warn('Failed to send snippet command:', err)
       })
+      setSnippetCooldowns((prev) => ({ ...prev, [index]: true }))
+      setTimeout(() => {
+        setSnippetCooldowns((prev) => {
+          const next = { ...prev }
+          delete next[index]
+          return next
+        })
+      }, 5000)
     },
-    [task.id]
+    [task.id, snippetCooldowns]
   )
 
   const handleMarkAsRead = useCallback(async () => {
@@ -295,15 +306,26 @@ export function TaskCard({
           <div className={styles.footer}>
             {dashboardSnippets.slice(0, 4).map((snippet, i) => {
               const iconOnly = snippet.icon && snippet.showIconInDashboard
+              const isCooling = !!snippetCooldowns[i]
               return (
                 <button
                   key={i}
-                  className={`${styles.snippetBtn} ${i === 0 ? styles.snippetBtnPrimary : ''} ${iconOnly ? styles.snippetBtnIcon : ''}`}
-                  onClick={(e) => handleSnippetClick(e, snippet)}
-                  title={`${snippet.title}: ${snippet.command}`}
+                  className={`${styles.snippetBtn} ${i === 0 && !isCooling ? styles.snippetBtnPrimary : ''} ${iconOnly && !isCooling ? styles.snippetBtnIcon : ''} ${isCooling ? styles.snippetBtnSent : ''}`}
+                  onClick={(e) => handleSnippetClick(e, snippet, i)}
+                  title={isCooling ? 'Sent!' : `${snippet.title}: ${snippet.command}`}
+                  disabled={isCooling}
                 >
-                  {snippet.icon && <LucideIconByName name={snippet.icon} size={12} />}
-                  {!iconOnly && snippet.title}
+                  {isCooling ? (
+                    <>
+                      <LucideIconByName name="Check" size={12} />
+                      Sent
+                    </>
+                  ) : (
+                    <>
+                      {snippet.icon && <LucideIconByName name={snippet.icon} size={12} />}
+                      {!iconOnly && snippet.title}
+                    </>
+                  )}
                 </button>
               )
             })}

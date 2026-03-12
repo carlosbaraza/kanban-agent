@@ -345,6 +345,17 @@ export function KanbanBoard(): React.JSX.Element {
     await archiveAllDone()
   }, [tasksByStatus, archiveAllDone])
 
+  const handleCompleteAllInReview = useCallback(async () => {
+    const inReviewTasks = (tasksByStatus['in-review'] ?? [])
+    if (inReviewTasks.length === 0) return
+    const doneTasks = tasksByStatus['done'] ?? []
+    await moveTasks(
+      inReviewTasks.map((t) => t.id),
+      'done',
+      doneTasks.length
+    )
+  }, [tasksByStatus, moveTasks])
+
   const handleOpenWorkspace = useCallback(async () => {
     const { openWorkspace } = useTaskStore.getState()
     await openWorkspace()
@@ -424,6 +435,14 @@ export function KanbanBoard(): React.JSX.Element {
                     title="Move all done tasks to archive"
                   >
                     Archive all
+                  </button>
+                ) : status === 'in-review' && (tasksByStatus['in-review'] ?? []).length > 0 ? (
+                  <button
+                    className={styles.archiveDoneButton}
+                    onClick={handleCompleteAllInReview}
+                    title="Move all in-review tasks to done"
+                  >
+                    Complete all
                   </button>
                 ) : undefined
               }
