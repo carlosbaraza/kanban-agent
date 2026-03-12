@@ -332,7 +332,7 @@ export function TaskCard({
             ref={priorityRef}
             className={styles.priorityBtn}
             onClick={handlePriorityIconClick}
-            title={`Priority: ${task.priority}`}
+            aria-label={`Priority: ${task.priority}`}
           >
             <PriorityIcon priority={task.priority} size={14} />
             {priorityOpen && (
@@ -374,14 +374,14 @@ export function TaskCard({
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
             style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
-            title={`Agent: ${task.agentStatus}`}
+            aria-label={`Agent: ${task.agentStatus}`}
           />
-          {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
+          {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
         </div>
 
         {/* Description preview — click opens task detail */}
         {documentContent !== null && documentContent.length > 0 && (
-          <div className={styles.descriptionPreview} title="Click to open task">
+          <div className={styles.descriptionPreview}>
             {documentContent.split('\n').filter(Boolean).slice(0, 3).map((line, i) => (
               <div key={i} className={styles.descriptionLine}>{line}</div>
             ))}
@@ -398,7 +398,7 @@ export function TaskCard({
                   key={i}
                   className={`${styles.snippetBtn} ${i === 0 && !isCooling ? styles.snippetBtnPrimary : ''} ${iconOnly && !isCooling ? styles.snippetBtnIcon : ''} ${isCooling ? styles.snippetBtnSent : ''}`}
                   onClick={(e) => handleSnippetClick(e, snippet, i)}
-                  title={isCooling ? 'Sent!' : `${snippet.title}: ${snippet.command}`}
+                  aria-label={isCooling ? 'Sent!' : `${snippet.title}: ${snippet.command}`}
                   disabled={isCooling}
                 >
                   {isCooling ? (
