@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ProjectState, Task, TaskStatus, LabelConfig } from '@shared/types'
+import { useNotificationStore } from './notification-store'
 
 interface TaskStore {
   // State
@@ -254,6 +255,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Kill tmux sessions and reset agent status when archiving
     if (newStatus === 'archived') {
       await killTmuxSessionsForTask(taskId)
+      useNotificationStore.getState().markReadByTaskId(taskId)
     }
 
     const newState: ProjectState = { ...projectState, tasks: updatedTasks }
@@ -362,6 +364,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (newStatus === 'archived') {
       for (const id of taskIds) {
         await killTmuxSessionsForTask(id)
+        useNotificationStore.getState().markReadByTaskId(id)
       }
     }
 
@@ -388,9 +391,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const doneTasks = projectState.tasks.filter((t: Task) => t.status === 'done')
     if (doneTasks.length === 0) return
 
-    // Kill tmux sessions for all tasks being archived
+    // Kill tmux sessions and mark notifications as read for all tasks being archived
     for (const task of doneTasks) {
       await killTmuxSessionsForTask(task.id)
+      useNotificationStore.getState().markReadByTaskId(task.id)
     }
 
     const now = new Date().toISOString()
