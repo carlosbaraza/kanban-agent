@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useCallback, useState, useRef, useEffect } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Task, TaskStatus, Priority, AgentStatus, Snippet, LabelConfig } from '@shared/types'
@@ -11,10 +11,6 @@ import { useBoardStore } from '@renderer/stores/board-store'
 import { ContextMenu, PriorityIcon } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
 import styles from './TaskCard.module.css'
-
-const LazyBlockEditor = lazy(() =>
-  import('@renderer/components/editor/BlockEditor').then((m) => ({ default: m.BlockEditor }))
-)
 
 function getLabelColor(name: string, projectLabels: LabelConfig[]): string {
   const config = projectLabels.find((l) => l.name === name)
@@ -84,9 +80,8 @@ export function TaskCard({
   const [editTitleValue, setEditTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Description preview + expand
+  // Description preview
   const [documentContent, setDocumentContent] = useState<string | null>(null)
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
   // Load document content on mount
   useEffect(() => {
@@ -140,20 +135,6 @@ export function TaskCard({
       setIsEditingTitle(false)
     }
   }, [handleTitleSave])
-
-  const handleDescriptionClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsDescriptionExpanded(true)
-  }, [])
-
-  const handleDescriptionCollapse = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsDescriptionExpanded(false)
-  }, [])
-
-  const handleEditorChange = useCallback((markdown: string) => {
-    setDocumentContent(markdown)
-  }, [])
 
   useEffect(() => {
     if (!priorityOpen) return
@@ -398,32 +379,13 @@ export function TaskCard({
           {hasUnread && <span className={styles.notificationDot} title="Has notifications" />}
         </div>
 
-        {/* Description preview / expanded editor */}
+        {/* Description preview — click opens task detail */}
         {documentContent !== null && documentContent.length > 0 && (
-          isDescriptionExpanded ? (
-            <div className={styles.descriptionExpanded} onClick={(e) => e.stopPropagation()}>
-              <Suspense fallback={<div className={styles.descriptionPreview}>Loading editor...</div>}>
-                <LazyBlockEditor
-                  taskId={task.id}
-                  initialContent={documentContent}
-                  onChange={handleEditorChange}
-                />
-              </Suspense>
-              <button
-                className={styles.collapseBtn}
-                onClick={handleDescriptionCollapse}
-                title="Collapse description"
-              >
-                Collapse
-              </button>
-            </div>
-          ) : (
-            <div className={styles.descriptionPreview} onClick={handleDescriptionClick} title="Click to expand and edit">
-              {documentContent.split('\n').filter(Boolean).slice(0, 3).map((line, i) => (
-                <div key={i} className={styles.descriptionLine}>{line}</div>
-              ))}
-            </div>
-          )
+          <div className={styles.descriptionPreview} title="Click to open task">
+            {documentContent.split('\n').filter(Boolean).slice(0, 3).map((line, i) => (
+              <div key={i} className={styles.descriptionLine}>{line}</div>
+            ))}
+          </div>
         )}
 
         {(dashboardSnippets.length > 0 || task.labels.length > 0) && (

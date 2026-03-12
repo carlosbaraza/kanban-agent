@@ -224,32 +224,6 @@
   white-space: nowrap;
 }
 
-.descriptionExpanded {
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-2);
-  margin-top: var(--space-1);
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.collapseBtn {
-  display: block;
-  width: 100%;
-  padding: 3px 0;
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--text-tertiary);
-  background: none;
-  border: none;
-  border-top: 1px solid var(--border);
-  cursor: pointer;
-  text-align: center;
-}
-
-.collapseBtn:hover {
-  color: var(--text-secondary);
-}
-
 /* ---- Priority inline picker ---- */
 
 .priorityBtn {
