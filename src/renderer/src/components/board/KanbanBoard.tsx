@@ -30,7 +30,7 @@ import { TaskCardOverlay } from './TaskCard'
 import styles from './KanbanBoard.module.css'
 
 export function KanbanBoard(): React.JSX.Element {
-  const { projectState, isLoading, addTask, moveTask, moveTasks, reorderTask, archiveAllDone } =
+  const { projectState, isLoading, addTask, moveTask, moveTasks, archiveAllDone } =
     useTaskStore()
   const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex } =
     useUIStore()
@@ -264,14 +264,18 @@ export function KanbanBoard(): React.JSX.Element {
           : [activeId]
 
       if (draggedIds.length > 1) {
-        await moveTasks(draggedIds, targetStatus, targetIndex)
+        // Filter out tasks already in the target column
+        const idsToMove = draggedIds.filter((id) => findTaskColumn(id) !== targetStatus)
+        if (idsToMove.length > 0) {
+          await moveTasks(idsToMove, targetStatus, targetIndex)
+        }
         clearSelection()
       } else {
         const sourceColumn = findTaskColumn(activeId)
         if (!sourceColumn) return
 
         if (sourceColumn === targetStatus) {
-          await reorderTask(activeId, targetIndex)
+          return // No-op: card is already in this column
         } else {
           await moveTask(activeId, targetStatus, targetIndex)
         }
@@ -282,7 +286,6 @@ export function KanbanBoard(): React.JSX.Element {
       findTaskColumn,
       moveTask,
       moveTasks,
-      reorderTask,
       setDraggedTask,
       setDragOverColumn,
       selectedTaskIds,
