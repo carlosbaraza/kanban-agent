@@ -198,12 +198,26 @@ export function TaskCard({
     [task, updateTask]
   )
 
+  const clearSelection = useBoardStore((s) => s.clearSelection)
+
   const handleDelete = useCallback(() => {
-    const confirmed = window.confirm(`Delete task "${task.title}"?`)
-    if (confirmed) {
-      deleteTask(task.id)
+    if (isMultiSelected && selectedTaskIds.size > 1) {
+      const count = selectedTaskIds.size
+      const confirmed = window.confirm(`Delete ${count} selected tasks?`)
+      if (confirmed) {
+        const idsToDelete = Array.from(selectedTaskIds)
+        clearSelection()
+        for (const id of idsToDelete) {
+          deleteTask(id)
+        }
+      }
+    } else {
+      const confirmed = window.confirm(`Delete task "${task.title}"?`)
+      if (confirmed) {
+        deleteTask(task.id)
+      }
     }
-  }, [task, deleteTask])
+  }, [task, deleteTask, isMultiSelected, selectedTaskIds, clearSelection])
 
   const handleCopyId = useCallback(() => {
     navigator.clipboard.writeText(task.id)
@@ -306,7 +320,9 @@ export function TaskCard({
     },
     { label: '', onClick: () => {}, divider: true },
     {
-      label: 'Delete',
+      label: isMultiSelected && selectedTaskIds.size > 1
+        ? `Delete ${selectedTaskIds.size} Tasks`
+        : 'Delete',
       onClick: handleDelete,
       danger: true,
       shortcut: 'Del'
