@@ -117,7 +117,7 @@ app.whenReady().then(async () => {
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+    optimizer.watchWindowShortcuts(window, { zoom: true })
   })
 
   // Handle familiar-attachment:// protocol requests by serving local files
