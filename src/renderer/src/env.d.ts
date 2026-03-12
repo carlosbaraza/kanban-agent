@@ -75,6 +75,10 @@ declare global {
       readSettings(): Promise<ProjectSettings>
       writeSettings(settings: ProjectSettings): Promise<void>
 
+      // CLI
+      cliCheckAvailable(): Promise<boolean>
+      cliInstallToPath(): Promise<{ success: boolean; shell: string; error?: string }>
+
       // App info
       getVersion(): Promise<string>
     }

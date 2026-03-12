@@ -107,6 +107,11 @@ const api = {
   writeSettings: (settings: ProjectSettings): Promise<void> =>
     ipcRenderer.invoke('settings:write', settings),
 
+  // CLI
+  cliCheckAvailable: (): Promise<boolean> => ipcRenderer.invoke('cli:check-available'),
+  cliInstallToPath: (): Promise<{ success: boolean; shell: string; error?: string }> =>
+    ipcRenderer.invoke('cli:install-to-path'),
+
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')
 }

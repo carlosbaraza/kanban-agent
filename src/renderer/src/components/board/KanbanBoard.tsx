@@ -27,6 +27,7 @@ import { useMarqueeSelection } from '@renderer/hooks/useMarqueeSelection'
 import { LoadingSpinner } from '@renderer/components/common'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
+import { CliSetupBanner } from './CliSetupBanner'
 import styles from './KanbanBoard.module.css'
 
 export interface DropIndicator {
@@ -350,74 +351,77 @@ export function KanbanBoard(): React.JSX.Element {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={collisionDetection}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <div
-        ref={boardRef}
-        className={styles.board}
-        onClick={() => { if (!consumeMarqueeClick()) clearSelection() }}
-        onMouseDown={handleMouseDown}
+    <div className={styles.boardWrapper}>
+      <CliSetupBanner />
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        {columnOrder.map((status, colIndex) => (
-          <KanbanColumn
-            key={status}
-            status={status}
-            tasks={tasksByStatus[status] ?? []}
-            onTaskClick={handleTaskClick}
-            onMultiSelect={handleMultiSelect}
-            onCreateTask={(title) => handleCreateTask(status, title)}
-            selectedTaskId={activeTaskId}
-            multiSelectedIds={selectedTaskIds}
-            draggedTaskId={activeTask?.id ?? null}
-            dropIndicator={
-              dropIndicator && dropIndicator.column === status ? dropIndicator : null
-            }
-            focusedTaskIndex={focusedTaskIndex}
-            isFocusedColumn={focusedColumnIndex === colIndex}
-            showCreateInput={createColumnIndex === colIndex}
-            onCreateInputShown={() => setCreateColumnIndex(null)}
-            headerAction={
-              status === 'done' && (tasksByStatus['done'] ?? []).length > 0 ? (
-                <button
-                  className={styles.archiveDoneButton}
-                  onClick={handleArchiveDone}
-                  title="Move all done tasks to archive"
-                >
-                  Archive all
-                </button>
-              ) : undefined
-            }
-          />
-        ))}
-      </div>
-
-      {isSelecting && marqueeRect && (
         <div
-          className={styles.marquee}
-          style={{
-            position: 'fixed',
-            left: marqueeRect.x,
-            top: marqueeRect.y,
-            width: marqueeRect.width,
-            height: marqueeRect.height
-          }}
-        />
-      )}
+          ref={boardRef}
+          className={styles.board}
+          onClick={() => { if (!consumeMarqueeClick()) clearSelection() }}
+          onMouseDown={handleMouseDown}
+        >
+          {columnOrder.map((status, colIndex) => (
+            <KanbanColumn
+              key={status}
+              status={status}
+              tasks={tasksByStatus[status] ?? []}
+              onTaskClick={handleTaskClick}
+              onMultiSelect={handleMultiSelect}
+              onCreateTask={(title) => handleCreateTask(status, title)}
+              selectedTaskId={activeTaskId}
+              multiSelectedIds={selectedTaskIds}
+              draggedTaskId={activeTask?.id ?? null}
+              dropIndicator={
+                dropIndicator && dropIndicator.column === status ? dropIndicator : null
+              }
+              focusedTaskIndex={focusedTaskIndex}
+              isFocusedColumn={focusedColumnIndex === colIndex}
+              showCreateInput={createColumnIndex === colIndex}
+              onCreateInputShown={() => setCreateColumnIndex(null)}
+              headerAction={
+                status === 'done' && (tasksByStatus['done'] ?? []).length > 0 ? (
+                  <button
+                    className={styles.archiveDoneButton}
+                    onClick={handleArchiveDone}
+                    title="Move all done tasks to archive"
+                  >
+                    Archive all
+                  </button>
+                ) : undefined
+              }
+            />
+          ))}
+        </div>
 
-      <DragOverlay dropAnimation={null}>
-        {activeTask ? (
-          <TaskCardOverlay
-            task={activeTask}
-            count={selectedTaskIds.has(activeTask.id) ? selectedTaskIds.size : 1}
+        {isSelecting && marqueeRect && (
+          <div
+            className={styles.marquee}
+            style={{
+              position: 'fixed',
+              left: marqueeRect.x,
+              top: marqueeRect.y,
+              width: marqueeRect.width,
+              height: marqueeRect.height
+            }}
           />
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        )}
+
+        <DragOverlay dropAnimation={null}>
+          {activeTask ? (
+            <TaskCardOverlay
+              task={activeTask}
+              count={selectedTaskIds.has(activeTask.id) ? selectedTaskIds.size : 1}
+            />
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </div>
   )
 }

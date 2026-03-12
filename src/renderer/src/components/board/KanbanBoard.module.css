@@ -2,6 +2,14 @@
    KanbanBoard — Horizontal scrolling board
    ========================================================================== */
 
+.boardWrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+}
+
 .board {
   display: flex;
   flex: 1;

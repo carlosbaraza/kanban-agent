@@ -8,6 +8,7 @@ import { registerTmuxHandlers } from './ipc/tmux-handlers'
 import { registerFileHandlers } from './ipc/file-handlers'
 import { registerNotificationHandlers } from './ipc/notification-handlers'
 import { registerWindowHandlers } from './ipc/window-handlers'
+import { registerCliHandlers } from './ipc/cli-handlers'
 import { DataService } from './services/data-service'
 import { FileWatcher } from './services/file-watcher'
 
@@ -80,6 +81,7 @@ function createWindow(): void {
     () => fileWatcher,
     (fw) => { fileWatcher = fw }
   )
+  registerCliHandlers()
 }
 
 app.whenReady().then(() => {
