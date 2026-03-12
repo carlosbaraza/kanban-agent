@@ -73,7 +73,7 @@ describe('KanbanBoard', () => {
   it('renders open workspace screen when no project state', () => {
     useTaskStore.setState({ isLoading: false, projectState: null })
     render(<KanbanBoard />)
-    expect(screen.getByText('Kanban Agent')).toBeInTheDocument()
+    expect(screen.getByText('Familiar')).toBeInTheDocument()
     expect(screen.getByText('Open Workspace')).toBeInTheDocument()
   })
 

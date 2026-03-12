@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const { error, componentStack } = this.state
     const sections: string[] = []
 
-    sections.push('=== Kanban Agent Crash Report ===')
+    sections.push('=== Familiar Crash Report ===')
     sections.push(`Timestamp: ${new Date().toISOString()}`)
     sections.push(`URL: ${window.location.href}`)
     sections.push(`Platform: ${navigator.platform}`)

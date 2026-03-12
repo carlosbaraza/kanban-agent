@@ -4,7 +4,7 @@ import chalk from 'chalk'
 
 export function openCommand(): Command {
   return new Command('open')
-    .description('Open the Kanban Agent app')
+    .description('Open the Familiar app')
     .argument('[id]', 'Task ID to open')
     .action(async (id?: string) => {
       const appName = 'Familiar'

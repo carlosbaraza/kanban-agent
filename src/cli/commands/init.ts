@@ -10,7 +10,7 @@ import { AGENTS_MD } from '../../shared/agent-instructions'
 
 export function initCommand(): Command {
   return new Command('init')
-    .description('Initialize a new Kanban Agent project in the current directory')
+    .description('Initialize a new Familiar project in the current directory')
     .action(async () => {
       const cwd = process.cwd()
       const dataDir = path.join(cwd, DATA_DIR)
@@ -48,7 +48,7 @@ export function initCommand(): Command {
       const settingsPath = path.join(dataDir, SETTINGS_FILE)
       await fs.writeFile(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2) + '\n', 'utf-8')
 
-      console.log(chalk.green('Kanban Agent project initialized successfully!'))
+      console.log(chalk.green('Familiar project initialized successfully!'))
       console.log(chalk.dim(`  Created ${DATA_DIR}/`))
       console.log(chalk.dim(`  Created ${DATA_DIR}/${STATE_FILE}`))
       console.log(chalk.dim(`  Created ${DATA_DIR}/${TASKS_DIR}/`))

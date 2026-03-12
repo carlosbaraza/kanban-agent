@@ -167,7 +167,7 @@ export function Navbar(): React.JSX.Element {
                 <span className={styles.helpDropdownIcon}>&#9881;</span>
                 <span className={styles.helpDropdownText}>
                   <span className={styles.helpDropdownTitle}>Copy Tmux Setup Prompt</span>
-                  <span className={styles.helpDropdownDesc}>Configure tmux for Kanban Agent</span>
+                  <span className={styles.helpDropdownDesc}>Configure tmux for Familiar</span>
                 </span>
                 {copiedItem === 'setup' && <span className={styles.copiedBadge}>Copied!</span>}
               </button>

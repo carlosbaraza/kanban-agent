@@ -129,7 +129,7 @@ function taskIdToUuid(taskId: string): string {
  * session matches the task ID.
  */
 function resolveClaudeSessionCommand(command: string, taskId: string, projectRoot: string): string {
-  // Match --resume followed by a shell variable (e.g. $FAMILIAR_TASK_ID, $KANBAN_TASK_ID)
+  // Match --resume followed by a shell variable (e.g. $FAMILIAR_TASK_ID)
   const resumePattern = /--resume\s+["']?\$\w+["']?/
   if (!resumePattern.test(command)) return command
 
