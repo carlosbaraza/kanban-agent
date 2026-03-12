@@ -101,6 +101,7 @@ export function useKeyboardNavigation({
 
         case 'Escape': {
           // Close task detail / deselect
+          // Shift+Escape also works (needed when terminal has focus)
           e.preventDefault()
           if (taskDetailOpen) {
             closeTaskDetail()

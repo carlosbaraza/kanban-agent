@@ -63,10 +63,12 @@ export function useGlobalShortcuts(): void {
         return
       }
 
-      // Escape — close whatever's open (detail, palette, etc.)
+      // Escape or Shift+Escape — close whatever's open (detail, palette, etc.)
+      // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code
       if (e.key === 'Escape') {
         // Don't handle if typing in inputs (let other handlers deal with it)
-        if (isInputFocused()) return
+        // Exception: Shift+Escape always closes (it's the explicit "close task view" shortcut)
+        if (!e.shiftKey && isInputFocused()) return
 
         if (commandPaletteOpen) {
           e.preventDefault()

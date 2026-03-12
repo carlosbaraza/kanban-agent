@@ -28,7 +28,8 @@ export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React
     }
   }, [taskId, visible, hasUnreadNotifications, markReadByTaskId])
 
-  // Close on Escape key — only when visible
+  // Close on Escape or Shift+Escape — only when visible
+  // Shift+Escape is needed because plain Escape is consumed by xterm/Claude Code
   useEffect(() => {
     if (!visible) return
     function handleKeyDown(e: KeyboardEvent): void {

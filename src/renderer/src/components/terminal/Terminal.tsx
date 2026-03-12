@@ -68,6 +68,13 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
       console.warn('WebGL renderer not available, falling back to canvas')
     }
 
+    // Let Shift+Escape bubble up to the app (not consumed by xterm)
+    // so users can close the task detail view from the terminal
+    term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      if (e.key === 'Escape' && e.shiftKey) return false
+      return true
+    })
+
     termRef.current = term
     fitAddonRef.current = fitAddon
 
