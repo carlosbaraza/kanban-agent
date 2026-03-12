@@ -98,16 +98,12 @@ describe('ElectronPtyManager inactivity detection', () => {
     const ds = createMockDataService([task])
     manager.setDataService(ds)
 
-    // No PTY sessions exist for task-1 (no create() called)
-    // Trigger inactivity check by advancing time past the check interval
     vi.advanceTimersByTime(15_000)
 
-    // Allow promises to resolve
     await vi.waitFor(() => {
       expect(ds.readProjectState).toHaveBeenCalled()
     })
 
-    // The task in the project state should have been set to idle
     const writeCall = (ds.writeProjectState as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(writeCall).toBeDefined()
     const updatedState = writeCall[0] as ProjectState
@@ -125,7 +121,6 @@ describe('ElectronPtyManager inactivity detection', () => {
       expect(ds.readProjectState).toHaveBeenCalled()
     })
 
-    // writeProjectState should NOT have been called since nothing changed
     expect(ds.writeProjectState).not.toHaveBeenCalled()
   })
 
@@ -160,31 +155,32 @@ describe('ElectronPtyManager inactivity detection', () => {
       expect(ds.writeProjectState).toHaveBeenCalled()
     })
 
-    const updatedState = (ds.writeProjectState as ReturnType<typeof vi.fn>).mock.calls[0][0] as ProjectState
-    // Both running tasks should be reset (no active PTY sessions)
+    const updatedState = (ds.writeProjectState as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as ProjectState
     expect(updatedState.tasks[0].agentStatus).toBe('idle')
     expect(updatedState.tasks[1].agentStatus).toBe('idle')
-    // Done task should remain done
     expect(updatedState.tasks[2].agentStatus).toBe('done')
   })
 
   it('should do nothing when dataService is not set', () => {
-    // Don't set dataService
     vi.advanceTimersByTime(15_000)
     // No errors should be thrown
   })
 
-  it('should track activity time when _handleActivityDetection is called', () => {
+  it('should not auto-promote idle to running on terminal output', () => {
     const ds = createMockDataService([createMockTask({ agentStatus: 'idle' })])
     manager.setDataService(ds)
 
-    // Access private method via bracket notation for testing
+    // Access private method for testing
     const mgr = manager as unknown as {
-      _handleActivityDetection: (taskId: string) => void
+      _trackTerminalActivity: (taskId: string) => void
       _lastActivityTime: Map<string, number>
     }
 
-    mgr._handleActivityDetection('task-1')
+    mgr._trackTerminalActivity('task-1')
+
+    // Should track time but NOT call readTask to auto-promote status
     expect(mgr._lastActivityTime.has('task-1')).toBe(true)
+    expect(ds.readTask).not.toHaveBeenCalled()
   })
 })
