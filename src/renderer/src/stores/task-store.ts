@@ -180,6 +180,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       updatedTask.agentStatus = 'idle'
     }
 
+    // Auto-set agent status to done when moving to in-review or done
+    if (updatedTask.status === 'in-review' || updatedTask.status === 'done') {
+      if (updatedTask.agentStatus === 'running') {
+        updatedTask.agentStatus = 'done'
+      }
+    }
+
     // Persist task file
     await window.api.updateTask(updatedTask)
 
@@ -284,6 +291,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     const movedTask = updatedTasks.find((t: Task) => t.id === taskId)!
     if (newStatus === 'archived') {
       movedTask.agentStatus = 'idle'
+    }
+
+    // Auto-set agent status to done when moving to in-review or done
+    if (newStatus === 'in-review' || newStatus === 'done') {
+      if (movedTask.agentStatus === 'running') {
+        movedTask.agentStatus = 'done'
+      }
     }
     await window.api.updateTask(movedTask)
     await window.api.writeProjectState(newState)
@@ -392,12 +406,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
     const newState: ProjectState = { ...projectState, tasks: updatedTasks }
 
-    // Persist each moved task (reset agentStatus if archiving)
+    // Persist each moved task (reset agentStatus if archiving, set done if in-review/done)
     for (const id of taskIds) {
       const updated = updatedTasks.find((t: Task) => t.id === id)
       if (updated) {
         if (newStatus === 'archived') {
           updated.agentStatus = 'idle'
+        } else if (newStatus === 'in-review' || newStatus === 'done') {
+          if (updated.agentStatus === 'running') {
+            updated.agentStatus = 'done'
+          }
         }
         await window.api.updateTask(updated)
       }

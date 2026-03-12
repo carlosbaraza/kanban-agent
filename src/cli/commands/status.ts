@@ -51,6 +51,10 @@ export function statusCommand(): Command {
       state.tasks[taskIndex].updatedAt = now
       if (newStatus === 'archived') {
         state.tasks[taskIndex].agentStatus = 'idle'
+      } else if (newStatus === 'in-review' || newStatus === 'done') {
+        if (state.tasks[taskIndex].agentStatus === 'running') {
+          state.tasks[taskIndex].agentStatus = 'done'
+        }
       }
 
       // Update task file
@@ -59,6 +63,10 @@ export function statusCommand(): Command {
       task.updatedAt = now
       if (newStatus === 'archived') {
         task.agentStatus = 'idle'
+      } else if (newStatus === 'in-review' || newStatus === 'done') {
+        if (task.agentStatus === 'running') {
+          task.agentStatus = 'done'
+        }
       }
       await writeTask(root, task)
 

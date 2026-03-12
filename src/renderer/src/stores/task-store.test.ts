@@ -418,6 +418,45 @@ describe('useTaskStore', () => {
       expect(stored.agentStatus).toBe('idle')
     })
 
+    it('sets agentStatus to done when status changes to in-review and agent is running', async () => {
+      const task = makeTask({ id: 'tsk_rev', status: 'in-progress', agentStatus: 'running' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, status: 'in-review' })
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('done')
+    })
+
+    it('sets agentStatus to done when status changes to done and agent is running', async () => {
+      const task = makeTask({ id: 'tsk_dn', status: 'in-progress', agentStatus: 'running' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, status: 'done' })
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('done')
+    })
+
+    it('does not change agentStatus when moving to in-review if agent is idle', async () => {
+      const task = makeTask({ id: 'tsk_idle', status: 'in-progress', agentStatus: 'idle' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().updateTask({ ...task, status: 'in-review' })
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('idle')
+    })
+
     it('does not kill tmux sessions for non-archive updates', async () => {
       const task = makeTask({ status: 'todo' })
       const state = makeProjectState([task])
@@ -514,6 +553,45 @@ describe('useTaskStore', () => {
       expect(moved.sortOrder).toBe(1)
     })
 
+    it('sets agentStatus to done when moving to in-review and agent is running', async () => {
+      const task = makeTask({ id: 'tsk_mvr', status: 'in-progress', sortOrder: 0, agentStatus: 'running' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTask('tsk_mvr', 'in-review', 0)
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('done')
+    })
+
+    it('sets agentStatus to done when moving to done and agent is running', async () => {
+      const task = makeTask({ id: 'tsk_mvd', status: 'in-progress', sortOrder: 0, agentStatus: 'running' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTask('tsk_mvd', 'done', 0)
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('done')
+    })
+
+    it('does not change agentStatus when moving to done if agent is idle', async () => {
+      const task = makeTask({ id: 'tsk_mvi', status: 'in-progress', sortOrder: 0, agentStatus: 'idle' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTask('tsk_mvi', 'done', 0)
+
+      const stored = useTaskStore.getState().projectState!.tasks[0]
+      expect(stored.agentStatus).toBe('idle')
+    })
+
     it('throws when project not initialized', async () => {
       await expect(
         useTaskStore.getState().moveTask('tsk_x', 'done', 0)
@@ -554,6 +632,21 @@ describe('useTaskStore', () => {
 
       expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_a-0')
       expect(mockApi.tmuxKill).toHaveBeenCalledWith('familiar-tsk_b-0')
+    })
+
+    it('sets agentStatus to done when bulk moving to in-review with running agents', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'in-progress', sortOrder: 0, agentStatus: 'running' })
+      const t2 = makeTask({ id: 'tsk_b', status: 'in-progress', sortOrder: 1, agentStatus: 'idle' })
+      const state = makeProjectState([t1, t2])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_b'], 'in-review', 0)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.agentStatus).toBe('done')
+      expect(tasks.find((t) => t.id === 'tsk_b')!.agentStatus).toBe('idle') // was idle, stays idle
     })
 
     it('throws when project not initialized', async () => {
