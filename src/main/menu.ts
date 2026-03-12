@@ -102,7 +102,7 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
       role: 'help',
       submenu: [
         {
-          label: 'Run Onboarding…',
+          label: 'Run Onboarding Wizard…',
           click: (): void => {
             mainWindow.webContents.send('menu:run-onboarding')
           }
