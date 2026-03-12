@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useBoardStore } from '@renderer/stores/board-store'
 import { useKeyboardNavigation } from './useKeyboardNavigation'
 import type { Task, TaskStatus } from '@shared/types'
 
@@ -62,6 +63,7 @@ describe('useKeyboardNavigation', () => {
       taskDetailOpen: false,
       activeTaskId: null
     })
+    useBoardStore.setState({ selectedTaskIds: new Set() })
     // Set up project state so updateTask/deleteTask work
     useTaskStore.setState({
       projectState: {
@@ -288,6 +290,61 @@ describe('useKeyboardNavigation', () => {
       (t) => t.id === 'tsk_a'
     )
     expect(task?.priority).toBe('none')
+  })
+
+  it('Delete deletes all selected tasks when multi-select is active', async () => {
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Delete'))
+    expect(window.confirm).toHaveBeenCalledWith('Delete 2 selected tasks?')
+    await vi.waitFor(() => {
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_a')
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_b')
+    })
+    // Selection should be cleared
+    expect(useBoardStore.getState().selectedTaskIds.size).toBe(0)
+  })
+
+  it('Delete deletes single selected task with correct message', async () => {
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a']) })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Delete'))
+    expect(window.confirm).toHaveBeenCalledWith('Delete 1 selected task?')
+    await vi.waitFor(() => {
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_a')
+    })
+  })
+
+  it('Delete falls back to focused task when no selection', async () => {
+    useBoardStore.setState({ selectedTaskIds: new Set() })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Delete'))
+    expect(window.confirm).toHaveBeenCalledWith('Delete task "Test task"?')
+    await vi.waitFor(() => {
+      expect(mockApi.deleteTask).toHaveBeenCalledWith('tsk_a')
+    })
+  })
+
+  it('Delete does not delete selected tasks when user cancels confirm', () => {
+    ;(window.confirm as any).mockReturnValueOnce(false)
+    useBoardStore.setState({ selectedTaskIds: new Set(['tsk_a', 'tsk_b']) })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Delete'))
+    expect(mockApi.deleteTask).not.toHaveBeenCalled()
+    // Selection should remain
+    expect(useBoardStore.getState().selectedTaskIds.size).toBe(2)
   })
 
   it('does not intercept keys when target is an input', () => {

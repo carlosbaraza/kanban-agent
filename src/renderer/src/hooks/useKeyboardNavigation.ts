@@ -153,15 +153,29 @@ export function useKeyboardNavigation({
 
         case 'Backspace':
         case 'Delete': {
-          // Delete focused task with confirm
+          // Delete selected tasks (multi-select) or focused task
           e.preventDefault()
-          const task = getFocusedTask()
-          if (task) {
+          if (selectedTaskIds.size > 0) {
+            const count = selectedTaskIds.size
             const confirmed = window.confirm(
-              `Delete task "${task.title}"?`
+              `Delete ${count} selected task${count > 1 ? 's' : ''}?`
             )
             if (confirmed) {
-              deleteTask(task.id)
+              const idsToDelete = Array.from(selectedTaskIds)
+              clearSelection()
+              for (const id of idsToDelete) {
+                deleteTask(id)
+              }
+            }
+          } else {
+            const task = getFocusedTask()
+            if (task) {
+              const confirmed = window.confirm(
+                `Delete task "${task.title}"?`
+              )
+              if (confirmed) {
+                deleteTask(task.id)
+              }
             }
           }
           break
@@ -187,6 +201,8 @@ export function useKeyboardNavigation({
     updateTask,
     deleteTask,
     getFocusedTask,
-    onCreateTask
+    onCreateTask,
+    selectedTaskIds,
+    clearSelection
   ])
 }
