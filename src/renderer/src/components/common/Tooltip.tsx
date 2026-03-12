@@ -24,6 +24,7 @@ export function Tooltip({
   disabled = false
 }: TooltipProps): React.JSX.Element {
   const [visible, setVisible] = useState(false)
+  const [positioned, setPositioned] = useState(false)
   const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const triggerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -33,6 +34,7 @@ export function Tooltip({
     if (disabled) return
     timerRef.current = setTimeout(() => {
       setVisible(true)
+      setPositioned(false)
     }, delay)
   }, [delay, disabled])
 
@@ -42,6 +44,7 @@ export function Tooltip({
       timerRef.current = null
     }
     setVisible(false)
+    setPositioned(false)
   }, [])
 
   // Position the tooltip after it becomes visible
@@ -56,35 +59,77 @@ export function Tooltip({
       const rect = trigger.getBoundingClientRect()
       const tipRect = tooltip.getBoundingClientRect()
       const gap = 8
+      const pad = 8
 
-      let top = 0
-      let left = 0
-
-      switch (placement) {
-        case 'top':
-          top = rect.top - tipRect.height - gap
-          left = rect.left + rect.width / 2 - tipRect.width / 2
-          break
-        case 'bottom':
-          top = rect.bottom + gap
-          left = rect.left + rect.width / 2 - tipRect.width / 2
-          break
-        case 'left':
-          top = rect.top + rect.height / 2 - tipRect.height / 2
-          left = rect.left - tipRect.width - gap
-          break
-        case 'right':
-          top = rect.top + rect.height / 2 - tipRect.height / 2
-          left = rect.right + gap
-          break
+      // Compute position for a given placement
+      const compute = (
+        p: TooltipPlacement
+      ): { top: number; left: number } => {
+        let t = 0
+        let l = 0
+        switch (p) {
+          case 'top':
+            t = rect.top - tipRect.height - gap
+            l = rect.left + rect.width / 2 - tipRect.width / 2
+            break
+          case 'bottom':
+            t = rect.bottom + gap
+            l = rect.left + rect.width / 2 - tipRect.width / 2
+            break
+          case 'left':
+            t = rect.top + rect.height / 2 - tipRect.height / 2
+            l = rect.left - tipRect.width - gap
+            break
+          case 'right':
+            t = rect.top + rect.height / 2 - tipRect.height / 2
+            l = rect.right + gap
+            break
+        }
+        return { top: t, left: l }
       }
 
-      // Clamp to viewport
-      const pad = 8
-      left = Math.max(pad, Math.min(left, window.innerWidth - tipRect.width - pad))
-      top = Math.max(pad, Math.min(top, window.innerHeight - tipRect.height - pad))
+      // Check if a position fits within viewport
+      const fits = (pos: { top: number; left: number }): boolean =>
+        pos.top >= pad &&
+        pos.left >= pad &&
+        pos.top + tipRect.height <= window.innerHeight - pad &&
+        pos.left + tipRect.width <= window.innerWidth - pad
 
-      setCoords({ top, left })
+      const opposite: Record<TooltipPlacement, TooltipPlacement> = {
+        top: 'bottom',
+        bottom: 'top',
+        left: 'right',
+        right: 'left'
+      }
+
+      // Try preferred placement first, then opposite, then remaining two
+      let pos = compute(placement)
+      if (!fits(pos)) {
+        const altPos = compute(opposite[placement])
+        if (fits(altPos)) {
+          pos = altPos
+        } else {
+          // Try the other axis
+          const remaining: TooltipPlacement[] =
+            placement === 'top' || placement === 'bottom'
+              ? ['left', 'right']
+              : ['top', 'bottom']
+          for (const p of remaining) {
+            const rPos = compute(p)
+            if (fits(rPos)) {
+              pos = rPos
+              break
+            }
+          }
+        }
+      }
+
+      // Final clamp as safety net
+      pos.left = Math.max(pad, Math.min(pos.left, window.innerWidth - tipRect.width - pad))
+      pos.top = Math.max(pad, Math.min(pos.top, window.innerHeight - tipRect.height - pad))
+
+      setCoords(pos)
+      setPositioned(true)
     }
 
     // Run on next frame so tooltip is measured
@@ -114,11 +159,11 @@ export function Tooltip({
             style={{
               ...styles.tooltip,
               top: coords.top,
-              left: coords.left
+              left: coords.left,
+              opacity: positioned ? 1 : 0
             }}
             onMouseEnter={hide}
           >
-            <div style={styles.arrow} data-placement={placement} />
             {content}
           </div>,
           document.body
@@ -144,9 +189,7 @@ const styles: Record<string, React.CSSProperties> = {
     pointerEvents: 'none',
     animation: 'tooltip-fade-in 0.15s ease-out'
   },
-  arrow: {
-    display: 'none'
-  }
+  arrow: {}
 }
 
 // Inject keyframe animation once
