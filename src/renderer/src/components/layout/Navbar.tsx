@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -39,15 +40,46 @@ export function Navbar(): React.JSX.Element {
 
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const bellBtnRef = useRef<HTMLButtonElement>(null)
 
   const [showHelpMenu, setShowHelpMenu] = useState(false)
   const helpMenuRef = useRef<HTMLDivElement>(null)
+  const helpBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Position state for portal-rendered dropdowns
+  const [helpPos, setHelpPos] = useState({ top: 0, right: 0 })
+  const [notifPos, setNotifPos] = useState({ top: 0, right: 0 })
+
+  // Update help dropdown position when it opens
+  useEffect(() => {
+    if (showHelpMenu && helpBtnRef.current) {
+      const rect = helpBtnRef.current.getBoundingClientRect()
+      setHelpPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right
+      })
+    }
+  }, [showHelpMenu])
+
+  // Update notification dropdown position when it opens
+  useEffect(() => {
+    if (showDropdown && bellBtnRef.current) {
+      const rect = bellBtnRef.current.getBoundingClientRect()
+      setNotifPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right
+      })
+    }
+  }, [showDropdown])
 
   // Close dropdown on outside click
   useEffect(() => {
     if (!showDropdown) return
     const handleClick = (e: MouseEvent): void => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+        bellBtnRef.current && !bellBtnRef.current.contains(e.target as Node)
+      ) {
         setShowDropdown(false)
       }
     }
@@ -59,7 +91,10 @@ export function Navbar(): React.JSX.Element {
   useEffect(() => {
     if (!showHelpMenu) return
     const handleClick = (e: MouseEvent): void => {
-      if (helpMenuRef.current && !helpMenuRef.current.contains(e.target as Node)) {
+      if (
+        helpMenuRef.current && !helpMenuRef.current.contains(e.target as Node) &&
+        helpBtnRef.current && !helpBtnRef.current.contains(e.target as Node)
+      ) {
         setShowHelpMenu(false)
       }
     }
@@ -146,121 +181,129 @@ export function Navbar(): React.JSX.Element {
         </button>
 
         {/* Help / agent setup prompts */}
-        <div className={styles.dropdownAnchor} ref={helpMenuRef}>
-          <button
-            className={`${styles.navButton} ${showHelpMenu ? styles.navButtonActive : ''}`}
-            onClick={() => setShowHelpMenu(!showHelpMenu)}
-            title="Agent setup prompts"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </button>
+        <button
+          ref={helpBtnRef}
+          className={`${styles.navButton} ${showHelpMenu ? styles.navButtonActive : ''}`}
+          onClick={() => setShowHelpMenu(!showHelpMenu)}
+          title="Agent setup prompts"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
 
-          {showHelpMenu && (
-            <div className={styles.helpDropdown}>
-              <button
-                className={styles.helpDropdownItem}
-                onClick={() => {
-                  useUIStore.getState().openOnboarding()
-                  setShowHelpMenu(false)
-                }}
-              >
-                <span className={styles.helpDropdownIcon}>&#128640;</span>
-                <span className={styles.helpDropdownText}>
-                  <span className={styles.helpDropdownTitle}>Run Onboarding</span>
-                  <span className={styles.helpDropdownDesc}>Re-run setup wizard</span>
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
+        {showHelpMenu && createPortal(
+          <div
+            ref={helpMenuRef}
+            className={styles.helpDropdownPortal}
+            style={{ top: helpPos.top, right: helpPos.right }}
+          >
+            <button
+              className={styles.helpDropdownItem}
+              onClick={() => {
+                useUIStore.getState().openOnboarding()
+                setShowHelpMenu(false)
+              }}
+            >
+              <span className={styles.helpDropdownIcon}>&#128640;</span>
+              <span className={styles.helpDropdownText}>
+                <span className={styles.helpDropdownTitle}>Run Onboarding</span>
+                <span className={styles.helpDropdownDesc}>Re-run setup wizard</span>
+              </span>
+            </button>
+          </div>,
+          document.body
+        )}
 
         {/* Agent quick-swap dots */}
         <AgentSwapWidget />
 
         {/* Notification bell */}
-        <div className={styles.dropdownAnchor} ref={dropdownRef}>
-          <button
-            className={`${styles.navButton} ${showDropdown ? styles.navButtonActive : ''}`}
-            onClick={() => setShowDropdown(!showDropdown)}
-            title="Notifications"
+        <button
+          ref={bellBtnRef}
+          className={`${styles.navButton} ${showDropdown ? styles.navButtonActive : ''}`}
+          onClick={() => setShowDropdown(!showDropdown)}
+          title="Notifications"
+        >
+          {/* Bell icon */}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6v2.5L2 10.5v1h12v-1l-1.5-2V6c0-2.5-2-4.5-4.5-4.5z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6 12.5c0 1.1.9 2 2 2s2-.9 2-2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          {count > 0 && (
+            <span className={styles.badge}>{count > 99 ? '99+' : count}</span>
+          )}
+        </button>
+
+        {showDropdown && createPortal(
+          <div
+            ref={dropdownRef}
+            className={styles.notificationDropdownPortal}
+            style={{ top: notifPos.top, right: notifPos.right }}
           >
-            {/* Bell icon */}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6v2.5L2 10.5v1h12v-1l-1.5-2V6c0-2.5-2-4.5-4.5-4.5z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M6 12.5c0 1.1.9 2 2 2s2-.9 2-2"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            {count > 0 && (
-              <span className={styles.badge}>{count > 99 ? '99+' : count}</span>
-            )}
-          </button>
-
-          {showDropdown && (
-            <div className={styles.notificationDropdown}>
-              <div className={styles.dropdownHeader}>
-                <span className={styles.dropdownTitle}>Notifications</span>
-                <div className={styles.dropdownActions}>
-                  {count > 0 && (
-                    <button
-                      className={styles.dropdownActionButton}
-                      onClick={() => markAllRead()}
-                    >
-                      Mark all read
-                    </button>
-                  )}
-                  {notifications.length > 0 && (
-                    <button
-                      className={styles.dropdownActionButton}
-                      onClick={() => {
-                        clearAll()
-                        setShowDropdown(false)
-                      }}
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.notificationList}>
-                {notifications.length === 0 ? (
-                  <div className={styles.emptyNotifications}>No notifications</div>
-                ) : (
-                  [...notifications]
-                    .reverse()
-                    .map((n) => (
-                      <div
-                        key={n.id}
-                        className={`${styles.notificationItem} ${!n.read ? styles.notificationUnread : ''}`}
-                        onClick={() => handleNotificationClick(n)}
-                      >
-                        <span className={styles.notificationTitle}>{n.title}</span>
-                        {n.body && (
-                          <span className={styles.notificationBody}>{n.body}</span>
-                        )}
-                        <span className={styles.notificationTime}>
-                          {formatRelativeTime(n.createdAt)}
-                        </span>
-                      </div>
-                    ))
+            <div className={styles.dropdownHeader}>
+              <span className={styles.dropdownTitle}>Notifications</span>
+              <div className={styles.dropdownActions}>
+                {count > 0 && (
+                  <button
+                    className={styles.dropdownActionButton}
+                    onClick={() => markAllRead()}
+                  >
+                    Mark all read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    className={styles.dropdownActionButton}
+                    onClick={() => {
+                      clearAll()
+                      setShowDropdown(false)
+                    }}
+                  >
+                    Clear all
+                  </button>
                 )}
               </div>
             </div>
-          )}
-        </div>
+
+            <div className={styles.notificationList}>
+              {notifications.length === 0 ? (
+                <div className={styles.emptyNotifications}>No notifications</div>
+              ) : (
+                [...notifications]
+                  .reverse()
+                  .map((n) => (
+                    <div
+                      key={n.id}
+                      className={`${styles.notificationItem} ${!n.read ? styles.notificationUnread : ''}`}
+                      onClick={() => handleNotificationClick(n)}
+                    >
+                      <span className={styles.notificationTitle}>{n.title}</span>
+                      {n.body && (
+                        <span className={styles.notificationBody}>{n.body}</span>
+                      )}
+                      <span className={styles.notificationTime}>
+                        {formatRelativeTime(n.createdAt)}
+                      </span>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     </nav>
   )

@@ -85,11 +85,9 @@
   pointer-events: none;
 }
 
-/* Notification dropdown */
-.notificationDropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+/* Portal-rendered notification dropdown (outside navbar DOM to escape drag region) */
+.notificationDropdownPortal {
+  position: fixed;
   z-index: calc(var(--z-modal) + 20);
   width: 320px;
   max-height: 400px;
@@ -192,17 +190,9 @@
   font-size: var(--font-size-sm);
 }
 
-/* Dropdown anchor */
-.dropdownAnchor {
-  position: relative;
-  z-index: calc(var(--z-modal) + 20);
-}
-
-/* Help dropdown */
-.helpDropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+/* Portal-rendered help dropdown (outside navbar DOM to escape drag region) */
+.helpDropdownPortal {
+  position: fixed;
   z-index: calc(var(--z-modal) + 20);
   width: 260px;
   background-color: var(--bg-surface);
