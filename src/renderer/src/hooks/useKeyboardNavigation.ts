@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useBoardStore } from '@renderer/stores/board-store'
 import type { Task, TaskStatus, Priority } from '@shared/types'
 
 interface UseKeyboardNavigationOptions {
@@ -25,6 +26,7 @@ export function useKeyboardNavigation({
   } = useUIStore()
 
   const { updateTask, deleteTask } = useTaskStore()
+  const { selectedTaskIds, clearSelection } = useBoardStore()
 
   const getFocusedTask = useCallback((): Task | undefined => {
     const column = columnOrder[focusedColumnIndex]
@@ -44,6 +46,11 @@ export function useKeyboardNavigation({
         target.tagName === 'SELECT' ||
         target.isContentEditable
       ) {
+        return
+      }
+
+      // When task detail is open, only allow Escape to close it
+      if (taskDetailOpen && e.key !== 'Escape') {
         return
       }
 

@@ -239,6 +239,57 @@ describe('useKeyboardNavigation', () => {
     expect(useUIStore.getState().focusedColumnIndex).toBe(1)
   })
 
+  it('does not process navigation keys when task detail is open', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('j'))
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+
+    act(() => fireKey('ArrowDown'))
+    expect(useUIStore.getState().focusedTaskIndex).toBe(0)
+
+    act(() => fireKey('l'))
+    expect(useUIStore.getState().focusedColumnIndex).toBe(0)
+
+    act(() => fireKey('ArrowRight'))
+    expect(useUIStore.getState().focusedColumnIndex).toBe(0)
+  })
+
+  it('Escape still works when task detail is open', () => {
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Escape'))
+    expect(useUIStore.getState().taskDetailOpen).toBe(false)
+  })
+
+  it('does not process create/priority/delete keys when task detail is open', () => {
+    const onCreateTask = vi.fn()
+    useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
+    renderHook(() =>
+      useKeyboardNavigation({
+        tasksByStatus,
+        columnOrder: COLUMN_ORDER,
+        onCreateTask
+      })
+    )
+
+    act(() => fireKey('c'))
+    expect(onCreateTask).not.toHaveBeenCalled()
+
+    act(() => fireKey('1'))
+    // Priority should remain unchanged
+    const task = useTaskStore.getState().projectState!.tasks.find(
+      (t) => t.id === 'tsk_a'
+    )
+    expect(task?.priority).toBe('none')
+  })
+
   it('does not intercept keys when target is an input', () => {
     renderHook(() =>
       useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
