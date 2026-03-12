@@ -112,6 +112,9 @@ const api = {
   cliInstallToPath: (): Promise<{ success: boolean; shell: string; error?: string }> =>
     ipcRenderer.invoke('cli:install-to-path'),
 
+  // Shell
+  openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),
+
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')
 }

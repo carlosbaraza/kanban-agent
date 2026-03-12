@@ -79,6 +79,9 @@ declare global {
       cliCheckAvailable(): Promise<boolean>
       cliInstallToPath(): Promise<{ success: boolean; shell: string; error?: string }>
 
+      // Shell
+      openPath(path: string): Promise<string>
+
       // App info
       getVersion(): Promise<string>
     }

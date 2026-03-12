@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, dialog, app } from 'electron'
+import { ipcMain, BrowserWindow, dialog, app, shell } from 'electron'
 import { DataService } from '../services/data-service'
 import { FileWatcher } from '../services/file-watcher'
 
@@ -33,5 +33,9 @@ export function registerWindowHandlers(
 
   ipcMain.handle('app:version', async () => {
     return app.getVersion()
+  })
+
+  ipcMain.handle('shell:open-path', async (_, path: string) => {
+    return shell.openPath(path)
   })
 }

@@ -9,6 +9,7 @@ import styles from './Navbar.module.css'
 export function Navbar(): React.JSX.Element {
   const projectState = useTaskStore((s) => s.projectState)
   const [folderName, setFolderName] = useState<string | null>(null)
+  const [projectRoot, setProjectRoot] = useState<string | null>(null)
 
   // Fetch the actual project root folder name
   useEffect(() => {
@@ -16,6 +17,7 @@ export function Navbar(): React.JSX.Element {
     window.api.getProjectRoot().then((root: string) => {
       const name = root.split('/').pop() || root
       setFolderName(name)
+      setProjectRoot(root)
     })
   }, [projectState])
 
@@ -76,6 +78,24 @@ export function Navbar(): React.JSX.Element {
             <rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
             <rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
             <rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+        </button>
+
+        {/* Open project folder in Finder */}
+        <button
+          className={styles.navButton}
+          onClick={() => {
+            if (projectRoot) window.api.openPath(projectRoot)
+          }}
+          title="Open in Finder"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M2 3.5C2 2.67 2.67 2 3.5 2H6l1.5 1.5H12.5C13.33 3.5 14 4.17 14 5v7.5c0 .83-.67 1.5-1.5 1.5h-9C2.67 14 2 13.33 2 12.5v-9z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
       </div>
