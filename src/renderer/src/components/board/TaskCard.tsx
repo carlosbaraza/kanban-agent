@@ -16,6 +16,14 @@ const AGENT_STATUS_COLORS: Record<AgentStatus, string> = {
   error: '#e74c3c'
 }
 
+/** Green "done" dot only shows when task is in the done column; otherwise gray */
+function getAgentDotColor(agentStatus: AgentStatus, taskStatus: TaskStatus): string {
+  if (agentStatus === 'done' && taskStatus !== 'done') {
+    return AGENT_STATUS_COLORS.idle
+  }
+  return AGENT_STATUS_COLORS[agentStatus]
+}
+
 interface TaskCardProps {
   task: Task
   onClick: () => void
@@ -180,7 +188,7 @@ export function TaskCard({
         <div className={styles.topRow}>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
-            style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
+            style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
             title={`Agent: ${task.agentStatus}`}
           />
           <span className={styles.title}>{task.title}</span>
@@ -228,7 +236,7 @@ export function TaskCardOverlay({
         <div className={styles.topRow}>
           <span
             className={`${styles.agentDot}${task.agentStatus === 'running' ? ` ${styles.agentRunning}` : ''}`}
-            style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
+            style={{ backgroundColor: getAgentDotColor(task.agentStatus, task.status) }}
           />
           <span className={styles.title}>{task.title}</span>
         </div>

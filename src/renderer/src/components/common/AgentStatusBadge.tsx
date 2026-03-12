@@ -1,7 +1,8 @@
-import type { AgentStatus } from '@shared/types'
+import type { AgentStatus, TaskStatus } from '@shared/types'
 
 export interface AgentStatusBadgeProps {
   status: AgentStatus
+  taskStatus?: TaskStatus
   showLabel?: boolean
 }
 
@@ -17,9 +18,13 @@ const STATUS_CONFIG: Record<
 
 export function AgentStatusBadge({
   status,
+  taskStatus,
   showLabel = false
 }: AgentStatusBadgeProps): React.JSX.Element {
-  const config = STATUS_CONFIG[status]
+  // Green "done" dot only shows when task is in the done column; otherwise gray
+  const effectiveStatus =
+    status === 'done' && taskStatus && taskStatus !== 'done' ? 'idle' : status
+  const config = STATUS_CONFIG[effectiveStatus]
 
   return (
     <span
