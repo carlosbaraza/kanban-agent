@@ -7,6 +7,7 @@ import { AppShell, Navbar } from '@renderer/components/layout'
 import { KanbanBoard } from '@renderer/components/board'
 import { CommandPalette } from './components/command-palette'
 import { TaskDetail } from './components/task-detail'
+import { SettingsPage } from './components/settings'
 
 function App(): React.JSX.Element {
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
@@ -15,6 +16,7 @@ function App(): React.JSX.Element {
   const activeTaskId = useUIStore((s) => s.activeTaskId)
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
   const mountedTaskIds = useUIStore((s) => s.mountedTaskIds)
+  const settingsOpen = useUIStore((s) => s.settingsOpen)
 
   // Centralized global keyboard shortcuts
   useGlobalShortcuts()
@@ -52,6 +54,7 @@ function App(): React.JSX.Element {
       <AppShell>
         <KanbanBoard />
         <CommandPalette />
+        {settingsOpen && <SettingsPage />}
         {Array.from(mountedTaskIds).map((taskId) => (
           <TaskDetail
             key={taskId}
