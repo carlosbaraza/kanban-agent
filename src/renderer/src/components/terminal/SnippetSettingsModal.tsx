@@ -118,7 +118,7 @@ const styles: Record<string, React.CSSProperties> = {
   modal: {
     width: '520px',
     maxHeight: '80vh',
-    backgroundColor: 'var(--bg-secondary)',
+    backgroundColor: 'var(--bg-surface)',
     border: '1px solid var(--border)',
     borderRadius: '10px',
     display: 'flex',

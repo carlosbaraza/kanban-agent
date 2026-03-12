@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Terminal } from './Terminal'
 import { SnippetSettingsModal } from './SnippetSettingsModal'
+import { Tooltip } from '@renderer/components/common'
 import type { Snippet } from '@shared/types'
 import { DEFAULT_SNIPPETS } from '@shared/types/settings'
 import { useTaskStore } from '@renderer/stores/task-store'
@@ -195,14 +196,39 @@ export function TerminalPanel({ taskId }: TerminalPanelProps): React.JSX.Element
     <div style={panelStyles.container}>
       <div style={panelStyles.snippetBar}>
         {snippets.map((snippet, i) => (
-          <button
+          <Tooltip
             key={i}
-            style={panelStyles.snippetButton}
-            onClick={() => handleSnippet(snippet)}
-            title={snippet.command}
+            placement="bottom"
+            content={
+              <div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 500, marginBottom: 4 }}>
+                  {snippet.title}
+                </div>
+                <code
+                  style={{
+                    fontSize: '11px',
+                    fontFamily: "'SF Mono', 'Fira Code', monospace",
+                    color: 'var(--accent-hover)',
+                    wordBreak: 'break-all'
+                  }}
+                >
+                  {snippet.command}
+                </code>
+                {snippet.pressEnter && (
+                  <div style={{ marginTop: 4, fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                    Auto-sends Enter
+                  </div>
+                )}
+              </div>
+            }
           >
-            {snippet.title}
-          </button>
+            <button
+              style={panelStyles.snippetButton}
+              onClick={() => handleSnippet(snippet)}
+            >
+              {snippet.title}
+            </button>
+          </Tooltip>
         ))}
         <button
           style={panelStyles.gearButton}
@@ -280,15 +306,16 @@ const panelStyles: Record<string, React.CSSProperties> = {
     transition: 'background-color 0.15s, color 0.15s'
   },
   gearButton: {
-    padding: '3px 6px',
-    fontSize: '13px',
+    padding: '3px 8px',
+    fontSize: '16px',
+    lineHeight: 1,
     borderRadius: '4px',
     border: '1px solid transparent',
     backgroundColor: 'transparent',
     color: 'var(--text-secondary)',
     cursor: 'pointer',
-    opacity: 0.6,
-    transition: 'opacity 0.15s'
+    opacity: 0.5,
+    transition: 'opacity 0.15s, background-color 0.15s'
   },
   stopButton: {
     border: '1px solid rgba(231, 76, 60, 0.3)',
