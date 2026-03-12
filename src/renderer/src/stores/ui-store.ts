@@ -119,8 +119,13 @@ export const useUIStore = create<UIState>((set) => ({
       return { activeTaskId: taskId, taskDetailOpen: true, mountedTaskIds: mounted }
     }),
 
-  closeTaskDetail: () =>
-    set({ activeTaskId: null, taskDetailOpen: false }),
+  closeTaskDetail: () => {
+    // Blur before state change so the element inside the task-detail overlay
+    // loses focus BEFORE visibility:hidden is applied. This prevents the
+    // browser from auto-shifting focus to the create-task input.
+    ;(document.activeElement as HTMLElement)?.blur?.()
+    set({ activeTaskId: null, taskDetailOpen: false })
+  },
 
   unmountTask: (taskId: string) =>
     set((state) => {

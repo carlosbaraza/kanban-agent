@@ -167,16 +167,15 @@ export function KanbanBoard(): React.JSX.Element {
   })
 
   // When the board becomes the active view, decide where DOM focus goes:
-  // - If a card is keyboard-focused, focus the board container so the browser
-  //   doesn't auto-shift focus to the create-task input (which would clear
-  //   keyboard nav state via handleInputFocus).
+  // - If a card is keyboard-focused, focus the board container so keyboard
+  //   events are captured by the navigation handler (not the input).
   // - If no card is focused, focus the create-task input after a short delay.
+  // Note: closeTaskDetail() blurs the active element before the state change,
+  // which prevents the browser from auto-shifting focus to the input.
   const boardIsActive = !taskDetailOpen && !settingsOpen && !isLoading
   useEffect(() => {
     if (!boardIsActive) return
     if (focusedColumnIndex >= 0) {
-      // Grab focus on the board container (tabIndex={-1}) so the browser
-      // doesn't move it to the input when the task-detail overlay hides
       boardElRef.current?.focus({ preventScroll: true })
     } else {
       // Small delay to let any closing animations/transitions complete
