@@ -6,10 +6,8 @@ import { TerminalPanel } from './TerminalPanel'
 import type { Task, ProjectState } from '@shared/types'
 
 // Mock the Terminal component since it uses xterm
-let capturedOnInput: (() => void) | undefined
 vi.mock('./Terminal', () => ({
-  Terminal: ({ sessionId, onInput }: { sessionId: string; onInput?: () => void }) => {
-    capturedOnInput = onInput
+  Terminal: ({ sessionId }: { sessionId: string }) => {
     return <div data-testid="mock-terminal">Terminal session: {sessionId}</div>
   }
 }))
@@ -94,7 +92,6 @@ describe('TerminalPanel', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
-    capturedOnInput = undefined
     // Restore default mocks
     mockApi.getProjectRoot.mockResolvedValue('/test/project')
     mockApi.ptyCreate.mockResolvedValue('session-123')
@@ -367,43 +364,4 @@ describe('TerminalPanel', () => {
     )
   })
 
-  it('promotes agentStatus to running on user input when idle', async () => {
-    const task = makeTask({ agentStatus: 'idle' })
-    useTaskStore.setState({
-      projectState: makeProjectState([task])
-    })
-
-    await renderActive()
-
-    expect(capturedOnInput).toBeDefined()
-
-    await act(async () => {
-      capturedOnInput!()
-      // Advance past the 1500ms debounce (must exceed file-watcher cycle)
-      await vi.advanceTimersByTimeAsync(1500)
-    })
-
-    expect(mockApi.updateTask).toHaveBeenCalledWith(
-      expect.objectContaining({ agentStatus: 'running' })
-    )
-  })
-
-  it('does NOT promote agentStatus when already running', async () => {
-    const task = makeTask({ agentStatus: 'running' })
-    useTaskStore.setState({
-      projectState: makeProjectState([task])
-    })
-
-    await renderActive()
-
-    expect(capturedOnInput).toBeDefined()
-
-    await act(async () => {
-      capturedOnInput!()
-      await vi.advanceTimersByTimeAsync(500)
-    })
-
-    // Should not call updateTask since already running
-    expect(mockApi.updateTask).not.toHaveBeenCalled()
-  })
 })

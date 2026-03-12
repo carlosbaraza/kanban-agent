@@ -145,30 +145,6 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
     }
   }, [createSession, isRestarting])
 
-  // When the user types in the terminal, promote agent status to 'running'.
-  // Debounce so we don't fire an update on every keystroke.
-  // The delay must exceed the file-watcher debounce (500ms) + IPC round-trip
-  // so the Zustand store has the latest disk state when we read it. Otherwise
-  // we risk spreading a stale task (with the old status) back to disk and
-  // overwriting concurrent CLI updates (e.g. the prompt-submit hook).
-  const userInputTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const handleUserInput = useCallback(() => {
-    if (userInputTimerRef.current) return // already scheduled
-    userInputTimerRef.current = setTimeout(() => {
-      userInputTimerRef.current = null
-      const currentTask = useTaskStore.getState().getTaskById(taskId)
-      if (currentTask && currentTask.agentStatus !== 'running') {
-        updateTask({ ...currentTask, agentStatus: 'running' })
-      }
-    }, 1500)
-  }, [taskId, updateTask])
-
-  // Clean up debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (userInputTimerRef.current) clearTimeout(userInputTimerRef.current)
-    }
-  }, [])
 
   // Show archived state — no terminal for archived tasks
   if (task?.status === 'archived') {
@@ -292,7 +268,7 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
         </Tooltip>
       </div>
       <div style={panelStyles.terminalArea}>
-        <Terminal sessionId={sessionId} visible={visible} onInput={handleUserInput} />
+        <Terminal sessionId={sessionId} visible={visible} />
       </div>
     </div>
   )
