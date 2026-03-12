@@ -58,11 +58,6 @@ export function AgentSwapWidget(): React.JSX.Element | null {
     return [...byTask.values(), ...noTask]
   }, [notifications])
 
-  // Nothing to show — hide widget entirely
-  if (activeAgents.length === 0 && unreadNotifications.length === 0) {
-    return null
-  }
-
   // Load last activity for agent preview
   const loadLastActivity = useCallback(async (taskId: string) => {
     try {
@@ -130,6 +125,11 @@ export function AgentSwapWidget(): React.JSX.Element | null {
       if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current)
     }
   }, [])
+
+  // Nothing to show — hide widget entirely
+  if (activeAgents.length === 0 && unreadNotifications.length === 0) {
+    return null
+  }
 
   const handleAgentClick = (taskId: string): void => {
     openTaskDetail(taskId)
