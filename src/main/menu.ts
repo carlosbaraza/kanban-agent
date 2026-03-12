@@ -33,7 +33,7 @@ export function buildAppMenu(mainWindow: BrowserWindow): Menu {
           accelerator: 'CmdOrCtrl+Shift+O',
           click: async (): Promise<void> => {
             const result = await dialog.showOpenDialog(mainWindow, {
-              properties: ['openDirectory']
+              properties: ['openDirectory', 'createDirectory']
             })
             const selectedPath = result.filePaths[0]
             if (!selectedPath) return

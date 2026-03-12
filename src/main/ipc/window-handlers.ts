@@ -10,7 +10,7 @@ export function registerWindowHandlers(
 ): void {
   ipcMain.handle('window:open-directory', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory']
+      properties: ['openDirectory', 'createDirectory']
     })
     return result.filePaths[0] || null
   })
