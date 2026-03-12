@@ -21,6 +21,9 @@ interface UIState {
   // Command palette
   commandPaletteOpen: boolean
 
+  // Settings page
+  settingsOpen: boolean
+
   // Board filters
   filters: TaskFilters
 
@@ -38,6 +41,8 @@ interface UIState {
   closeTaskDetail: () => void
   unmountTask: (taskId: string) => void
   toggleCommandPalette: () => void
+  openSettings: () => void
+  closeSettings: () => void
   setFilter: <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => void
   clearFilters: () => void
   setFocusedColumn: (index: number) => void
@@ -71,6 +76,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Command palette
   commandPaletteOpen: false,
+
+  // Settings page
+  settingsOpen: false,
 
   // Board filters
   filters: { ...defaultFilters },
@@ -107,6 +115,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleCommandPalette: () =>
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
+
+  openSettings: () =>
+    set({ settingsOpen: true, taskDetailOpen: false, commandPaletteOpen: false }),
+
+  closeSettings: () =>
+    set({ settingsOpen: false }),
 
   setFilter: (key, value) =>
     set((state) => ({ filters: { ...state.filters, [key]: value } })),
