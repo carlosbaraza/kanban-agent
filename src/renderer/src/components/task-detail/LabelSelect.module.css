@@ -119,10 +119,8 @@
 }
 
 .colorPicker {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 2px);
-  z-index: 1;
+  position: fixed;
+  z-index: var(--z-popover, 1000);
   display: flex;
   gap: 4px;
   padding: 6px;
@@ -132,6 +130,7 @@
   box-shadow: var(--shadow-lg);
   flex-wrap: wrap;
   width: 130px;
+  transform: translateX(-100%);
 }
 
 .colorSwatch {

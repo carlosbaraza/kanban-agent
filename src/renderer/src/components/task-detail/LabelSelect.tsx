@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { DEFAULT_LABEL_COLOR } from '@shared/constants'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
@@ -25,9 +26,11 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
   const [open, setOpen] = useState(false)
   const [newLabelName, setNewLabelName] = useState('')
   const [editingColor, setEditingColor] = useState<string | null>(null)
+  const [colorPickerPos, setColorPickerPos] = useState<{ top: number; left: number } | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const colorPickerRef = useRef<HTMLDivElement>(null)
   useDropdownPosition(dropdownRef, open)
 
   const projectState = useTaskStore((s) => s.projectState)
@@ -36,7 +39,9 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (colorPickerRef.current?.contains(target)) return
+      if (wrapperRef.current && !wrapperRef.current.contains(target)) {
         setOpen(false)
         setEditingColor(null)
       }
@@ -104,7 +109,7 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
     newLabelName.trim() &&
     !projectLabels.some((l) => l.name === newLabelName.trim().toLowerCase())
 
-  return (
+  return (<>
     <div className={styles.wrapper} ref={wrapperRef}>
       <button className={styles.trigger} onClick={() => setOpen(!open)} title="Add label">
         +
@@ -141,25 +146,16 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
                     style={{ backgroundColor: label.color }}
                     onClick={(e) => {
                       e.stopPropagation()
-                      setEditingColor(editingColor === label.name ? null : label.name)
+                      if (editingColor === label.name) {
+                        setEditingColor(null)
+                      } else {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        setColorPickerPos({ top: rect.bottom + 4, left: rect.right })
+                        setEditingColor(label.name)
+                      }
                     }}
                     title="Change color"
                   />
-                  {editingColor === label.name && (
-                    <div className={styles.colorPicker}>
-                      {PRESET_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          className={`${styles.colorSwatch} ${c === label.color ? styles.colorSwatchActive : ''}`}
-                          style={{ backgroundColor: c }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleColorChange(label.name, c)
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
               )
             })}
@@ -178,5 +174,30 @@ export function LabelSelect({ taskLabels, onToggle }: LabelSelectProps): React.J
         </div>
       )}
     </div>
+    {editingColor && colorPickerPos && (() => {
+      const editingLabel = projectLabels.find((l) => l.name === editingColor)
+      if (!editingLabel) return null
+      return createPortal(
+        <div
+          ref={colorPickerRef}
+          className={styles.colorPicker}
+          style={{ top: colorPickerPos.top, left: colorPickerPos.left }}
+        >
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c}
+              className={`${styles.colorSwatch} ${c === editingLabel.color ? styles.colorSwatchActive : ''}`}
+              style={{ backgroundColor: c }}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleColorChange(editingLabel.name, c)
+              }}
+            />
+          ))}
+        </div>,
+        document.body
+      )
+    })()}
+  </>
   )
 }
