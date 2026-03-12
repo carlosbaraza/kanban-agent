@@ -126,3 +126,71 @@ describe('KanbanColumn — snippet toggles', () => {
     expect(onCreateTask).toHaveBeenCalledWith('New task', undefined, undefined)
   })
 })
+
+describe('KanbanColumn — draft persistence', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('persists draft text to localStorage as user types', () => {
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.change(textarea, { target: { value: 'My draft' } })
+
+    expect(localStorage.getItem('familiar-draft-todo')).toBe('My draft')
+  })
+
+  it('restores draft text from localStorage on mount', () => {
+    localStorage.setItem('familiar-draft-todo', 'Saved draft')
+
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+    expect(textarea.value).toBe('Saved draft')
+  })
+
+  it('clears draft from localStorage when task is created via Enter', () => {
+    localStorage.setItem('familiar-draft-todo', 'Will be cleared')
+
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.change(textarea, { target: { value: 'New task' } })
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+
+    expect(localStorage.getItem('familiar-draft-todo')).toBeNull()
+  })
+
+  it('clears draft from localStorage when Escape is pressed', () => {
+    localStorage.setItem('familiar-draft-todo', 'Will be cleared')
+
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.keyDown(textarea, { key: 'Escape' })
+
+    expect(localStorage.getItem('familiar-draft-todo')).toBeNull()
+  })
+
+  it('uses different localStorage keys for different columns', () => {
+    render(<KanbanColumn {...defaultProps} status="in-progress" showCreateInput />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.change(textarea, { target: { value: 'In progress draft' } })
+
+    expect(localStorage.getItem('familiar-draft-in-progress')).toBe('In progress draft')
+    expect(localStorage.getItem('familiar-draft-todo')).toBeNull()
+  })
+
+  it('removes localStorage key when text is cleared to empty', () => {
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i)
+    fireEvent.change(textarea, { target: { value: 'Draft' } })
+    expect(localStorage.getItem('familiar-draft-todo')).toBe('Draft')
+
+    fireEvent.change(textarea, { target: { value: '' } })
+    expect(localStorage.getItem('familiar-draft-todo')).toBeNull()
+  })
+})

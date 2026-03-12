@@ -59,7 +59,8 @@ export function KanbanColumn({
   alwaysShowInput = false,
   onInputExit
 }: KanbanColumnProps): React.JSX.Element {
-  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const draftKey = `familiar-draft-${status}`
+  const [newTaskTitle, setNewTaskTitle] = useState(() => localStorage.getItem(draftKey) ?? '')
   const [isCreating, setIsCreating] = useState(false)
   const [enabledSnippetIndices, setEnabledSnippetIndices] = useState<Set<number>>(() => {
     // All snippets enabled by default
@@ -67,6 +68,18 @@ export function KanbanColumn({
   })
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const contextMenu = useContextMenu()
+
+  const updateDraft = useCallback(
+    (value: string) => {
+      setNewTaskTitle(value)
+      if (value) {
+        localStorage.setItem(draftKey, value)
+      } else {
+        localStorage.removeItem(draftKey)
+      }
+    },
+    [draftKey]
+  )
 
   const { isOver, setNodeRef } = useDroppable({
     id: `column-${status}`,
@@ -156,11 +169,11 @@ export function KanbanColumn({
         if (title) {
           const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
           onCreateTask(title, document, enabled.length > 0 ? enabled : undefined)
-          setNewTaskTitle('')
+          updateDraft('')
         }
       }
       if (e.key === 'Escape') {
-        setNewTaskTitle('')
+        updateDraft('')
         if (!alwaysShowInput) {
           setIsCreating(false)
         }
@@ -180,7 +193,7 @@ export function KanbanColumn({
         }
       }
     },
-    [newTaskTitle, onCreateTask, alwaysShowInput, onInputExit]
+    [newTaskTitle, onCreateTask, alwaysShowInput, onInputExit, updateDraft]
   )
 
   const handleBlur = useCallback(() => {
@@ -294,7 +307,7 @@ export function KanbanColumn({
             className={styles.createInput}
             placeholder="Task title... (Shift+Enter for notes, Enter to create)"
             value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onChange={(e) => updateDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
             rows={1}
