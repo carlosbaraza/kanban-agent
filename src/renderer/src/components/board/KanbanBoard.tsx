@@ -40,7 +40,7 @@ export interface DropIndicator {
 export function KanbanBoard(): React.JSX.Element {
   const { projectState, isLoading, addTask, moveTask, reorderTask, moveTasks, archiveAllDone } =
     useTaskStore()
-  const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex } =
+  const { filters, openTaskDetail, activeTaskId, focusedColumnIndex, focusedTaskIndex, taskDetailOpen, settingsOpen } =
     useUIStore()
   const {
     setDraggedTask,
@@ -165,6 +165,18 @@ export function KanbanBoard(): React.JSX.Element {
     onCreateTask: handleKeyboardCreate,
     onFocusInput: handleFocusInput
   })
+
+  // Auto-focus the new task input when the board is the active view
+  const boardIsActive = !taskDetailOpen && !settingsOpen && !isLoading
+  useEffect(() => {
+    if (boardIsActive) {
+      // Small delay to let any closing animations/transitions complete
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event('focus-new-task-input'))
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [boardIsActive])
 
   // Marquee (lasso) selection
   const handleMarqueeSelect = useCallback(
