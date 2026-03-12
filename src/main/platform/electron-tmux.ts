@@ -79,6 +79,10 @@ export class ElectronTmuxManager implements ITmuxManager {
   async createSession(sessionName: string, cwd: string, env?: Record<string, string>): Promise<void> {
     await this._exec(['new-session', '-d', '-s', sessionName, '-c', cwd])
 
+    // Enable extended keys so Shift+Enter, Ctrl+Enter etc. are forwarded to inner apps.
+    // "always" sends unconditionally without the inner app needing to request them.
+    await this._execTmux(['set-option', '-t', sessionName, '-s', 'extended-keys', 'always'])
+
     // Inject environment variables into the running shell and the session
     if (env) {
       for (const [key, value] of Object.entries(env)) {
