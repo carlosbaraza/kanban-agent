@@ -116,8 +116,10 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
 
       // Update agent status to idle — but only if currently running.
       // If the agent already set itself to 'done', respect that.
-      if (task && task.agentStatus === 'running') {
-        await updateTask({ ...task, agentStatus: 'idle' })
+      // Re-read from store to avoid spreading stale task data.
+      const freshTask = useTaskStore.getState().getTaskById(taskId)
+      if (freshTask && freshTask.agentStatus === 'running') {
+        await updateTask({ ...freshTask, agentStatus: 'idle' })
       }
 
       setIsStopped(true)
@@ -145,6 +147,10 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
 
   // When the user types in the terminal, promote agent status to 'running'.
   // Debounce so we don't fire an update on every keystroke.
+  // The delay must exceed the file-watcher debounce (500ms) + IPC round-trip
+  // so the Zustand store has the latest disk state when we read it. Otherwise
+  // we risk spreading a stale task (with the old status) back to disk and
+  // overwriting concurrent CLI updates (e.g. the prompt-submit hook).
   const userInputTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleUserInput = useCallback(() => {
     if (userInputTimerRef.current) return // already scheduled
@@ -154,7 +160,7 @@ export function TerminalPanel({ taskId, visible }: TerminalPanelProps): React.JS
       if (currentTask && currentTask.agentStatus !== 'running') {
         updateTask({ ...currentTask, agentStatus: 'running' })
       }
-    }, 500)
+    }, 1500)
   }, [taskId, updateTask])
 
   // Clean up debounce timer on unmount

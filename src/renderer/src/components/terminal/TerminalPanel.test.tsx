@@ -379,8 +379,8 @@ describe('TerminalPanel', () => {
 
     await act(async () => {
       capturedOnInput!()
-      // Advance past the 500ms debounce
-      await vi.advanceTimersByTimeAsync(500)
+      // Advance past the 1500ms debounce (must exceed file-watcher cycle)
+      await vi.advanceTimersByTimeAsync(1500)
     })
 
     expect(mockApi.updateTask).toHaveBeenCalledWith(
