@@ -279,16 +279,15 @@ describe('KanbanColumn — input focus guard', () => {
     expect(useUIStore.getState().focusedColumnIndex).toBe(-1)
   })
 
-  it('does not clear keyboard focus when input receives focus while a card is focused', () => {
+  it('clears card keyboard focus when input is clicked while a card is focused', () => {
     useUIStore.setState({ focusedColumnIndex: 1, focusedTaskIndex: 2 })
     render(<KanbanColumn {...defaultProps} />)
 
     const textarea = screen.getByPlaceholderText(/Task title/i)
     fireEvent.focus(textarea)
 
-    // Keyboard nav state should be preserved
-    expect(useUIStore.getState().focusedColumnIndex).toBe(1)
-    expect(useUIStore.getState().focusedTaskIndex).toBe(2)
+    // Clicking/focusing the input should clear card focus so the input stays focused
+    expect(useUIStore.getState().focusedColumnIndex).toBe(-1)
   })
 
   it('clears card focus and focuses input on focus-new-task-input event (Cmd+N)', () => {
