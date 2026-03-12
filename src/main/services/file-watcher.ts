@@ -21,7 +21,8 @@ export class FileWatcher {
       ignoreInitial: true,
       persistent: true,
       depth: 3,
-      awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 }
+      ignored: /\.tmp-/,
+      awaitWriteFinish: false
     })
 
     this.watcher.on('all', () => {

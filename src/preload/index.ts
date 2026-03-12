@@ -117,9 +117,10 @@ const api = {
 
   // File watching
   watchProjectDir: (callback: () => void): (() => void) => {
-    ipcRenderer.on('project:file-changed', () => callback())
+    const handler = (): void => callback()
+    ipcRenderer.on('project:file-changed', handler)
     return () => {
-      ipcRenderer.removeAllListeners('project:file-changed')
+      ipcRenderer.removeListener('project:file-changed', handler)
     }
   },
   unwatchProjectDir: (): void => {
