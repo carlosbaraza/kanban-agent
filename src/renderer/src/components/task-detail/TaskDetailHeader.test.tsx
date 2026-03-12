@@ -260,4 +260,40 @@ describe('TaskDetailHeader', () => {
     // Should revert to original, not call update with empty
     expect(onUpdate).not.toHaveBeenCalled()
   })
+
+  it('syncs title when task prop changes externally', () => {
+    const task = makeTask({ title: 'Original title' })
+    const { rerender } = render(
+      <TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />
+    )
+    expect(screen.getByDisplayValue('Original title')).toBeInTheDocument()
+
+    // Simulate external update (e.g. file watcher reloads state)
+    const updatedTask = makeTask({ title: 'Externally updated title' })
+    rerender(
+      <TaskDetailHeader task={updatedTask} onUpdate={onUpdate} onClose={onClose} />
+    )
+    expect(screen.getByDisplayValue('Externally updated title')).toBeInTheDocument()
+  })
+
+  it('does not overwrite local edits when task prop changes during editing', () => {
+    const task = makeTask({ title: 'Original title' })
+    const { rerender } = render(
+      <TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />
+    )
+    const textarea = screen.getByDisplayValue('Original title')
+
+    // User starts editing
+    fireEvent.focus(textarea)
+    fireEvent.change(textarea, { target: { value: 'User typing...' } })
+
+    // External update arrives while user is editing
+    const updatedTask = makeTask({ title: 'External change' })
+    rerender(
+      <TaskDetailHeader task={updatedTask} onUpdate={onUpdate} onClose={onClose} />
+    )
+
+    // Local edit should be preserved, not overwritten
+    expect(textarea).toHaveValue('User typing...')
+  })
 })

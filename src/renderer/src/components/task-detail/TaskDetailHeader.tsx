@@ -85,6 +85,13 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
     }
   }, [])
 
+  // Sync local title state when task.title changes externally (e.g. file watcher)
+  useEffect(() => {
+    if (!_editingTitle) {
+      setTitleValue(task.title)
+    }
+  }, [task.title, _editingTitle])
+
   useEffect(() => {
     resizeTitleTextarea()
   }, [titleValue, resizeTitleTextarea])
