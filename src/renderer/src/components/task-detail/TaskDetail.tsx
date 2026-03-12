@@ -16,13 +16,17 @@ export function TaskDetail({ taskId, visible, onClose }: TaskDetailProps): React
   const task = useTaskStore((s) => s.getTaskById(taskId))
   const updateTask = useTaskStore((s) => s.updateTask)
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
+  const hasUnreadNotifications = useNotificationStore((s) =>
+    s.notifications.some((n) => !n.read && n.taskId === taskId)
+  )
 
-  // Clear notifications only when task becomes visible (not just mounted)
+  // Clear notifications when task is visible — reacts to both becoming visible
+  // and new notifications arriving while already visible
   useEffect(() => {
-    if (visible) {
+    if (visible && hasUnreadNotifications) {
       markReadByTaskId(taskId)
     }
-  }, [taskId, visible, markReadByTaskId])
+  }, [taskId, visible, hasUnreadNotifications, markReadByTaskId])
 
   // Close on Escape key — only when visible
   useEffect(() => {
