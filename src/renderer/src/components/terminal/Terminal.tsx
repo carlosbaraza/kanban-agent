@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 
 interface TerminalProps {
@@ -68,6 +69,12 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     } catch {
       console.warn('WebGL renderer not available, falling back to canvas')
     }
+
+    // Enable clickable URLs — opens in default browser on click
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      window.api.openExternal(uri)
+    })
+    term.loadAddon(webLinksAddon)
 
     // Custom key event handler for keys that need special treatment
     term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
@@ -147,9 +154,13 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
             if (blob) {
               e.preventDefault()
               e.stopImmediatePropagation()
-              const arrayBuffer = await blob.arrayBuffer()
-              const savedPath = await window.api.clipboardSaveImage(arrayBuffer, item.type)
-              window.api.ptyWrite(sessionId, savedPath)
+              try {
+                const arrayBuffer = await blob.arrayBuffer()
+                const savedPath = await window.api.clipboardSaveImage(arrayBuffer, item.type)
+                window.api.ptyWrite(sessionId, savedPath)
+              } catch (err) {
+                console.error('Failed to save clipboard image:', err)
+              }
               return
             }
           }

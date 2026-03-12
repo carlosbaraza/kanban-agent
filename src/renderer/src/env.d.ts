@@ -85,6 +85,7 @@ declare global {
 
       // Shell
       openPath(path: string): Promise<string>
+      openExternal(url: string): Promise<void>
 
       // App info
       getVersion(): Promise<string>

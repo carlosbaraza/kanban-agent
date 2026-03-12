@@ -126,6 +126,7 @@ const api = {
 
   // Shell
   openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version')

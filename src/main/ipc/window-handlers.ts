@@ -38,4 +38,8 @@ export function registerWindowHandlers(
   ipcMain.handle('shell:open-path', async (_, path: string) => {
     return shell.openPath(path)
   })
+
+  ipcMain.handle('shell:open-external', async (_, url: string) => {
+    return shell.openExternal(url)
+  })
 }

@@ -45,6 +45,16 @@ vi.mock('@xterm/addon-webgl', () => ({
   WebglAddon: class MockWebglAddon {}
 }))
 
+// Mock WebLinksAddon — capture the handler so tests can invoke it
+let capturedLinkHandler: ((event: MouseEvent, uri: string) => void) | undefined
+vi.mock('@xterm/addon-web-links', () => ({
+  WebLinksAddon: class MockWebLinksAddon {
+    constructor(handler?: (event: MouseEvent, uri: string) => void) {
+      capturedLinkHandler = handler
+    }
+  }
+}))
+
 // Mock CSS import
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 
@@ -56,7 +66,8 @@ const mockApi = {
   onPtyData: mockOnPtyData,
   ptyWrite: vi.fn().mockResolvedValue(undefined),
   ptyResize: vi.fn().mockResolvedValue(undefined),
-  clipboardSaveImage: vi.fn().mockResolvedValue('/tmp/image.png')
+  clipboardSaveImage: vi.fn().mockResolvedValue('/tmp/image.png'),
+  openExternal: vi.fn().mockResolvedValue(undefined)
 }
 
 ;(window as any).api = mockApi
@@ -100,10 +111,10 @@ describe('Terminal', () => {
     expect(mockOpen).toHaveBeenCalledOnce()
   })
 
-  it('loads FitAddon and WebglAddon', () => {
+  it('loads FitAddon, WebglAddon, and WebLinksAddon', () => {
     render(<Terminal sessionId="test-session" />)
-    // Should load at least 2 addons: FitAddon + WebglAddon
-    expect(mockLoadAddon).toHaveBeenCalledTimes(2)
+    // Should load 3 addons: FitAddon + WebglAddon + WebLinksAddon
+    expect(mockLoadAddon).toHaveBeenCalledTimes(3)
   })
 
   it('calls fit and focus after mount via requestAnimationFrame', () => {
@@ -169,6 +180,19 @@ describe('Terminal', () => {
     expect(handler({ key: 'a', shiftKey: false })).toBe(true)
   })
 
+  it('opens URLs in default browser when clicked in terminal', () => {
+    render(<Terminal sessionId="test-session" />)
+
+    // WebLinksAddon should have captured the link handler
+    expect(capturedLinkHandler).toBeDefined()
+
+    // Simulate clicking a URL
+    const fakeEvent = new MouseEvent('click')
+    capturedLinkHandler!(fakeEvent, 'https://example.com')
+
+    expect(mockApi.openExternal).toHaveBeenCalledWith('https://example.com')
+  })
+
   it('calls onReady callback after initialization', () => {
     const onReady = vi.fn()
     render(<Terminal sessionId="test-session" onReady={onReady} />)
@@ -198,5 +222,174 @@ describe('Terminal', () => {
     expect(() => render(<Terminal sessionId="test-session" />)).not.toThrow()
 
     consoleSpy.mockRestore()
+  })
+
+  describe('paste handling', () => {
+    /**
+     * Helper to create a synthetic ClipboardEvent with the given data.
+     * jsdom doesn't fully support DataTransfer, so we mock it manually.
+     */
+    function createPasteEvent(options: {
+      files?: Array<{ path?: string; name: string; type: string }>
+      items?: Array<{ kind: string; type: string; file?: Blob | null }>
+      text?: string
+    }): ClipboardEvent {
+      const files = options.files ?? []
+      const items = options.items ?? []
+      const text = options.text ?? ''
+
+      const fileList = {
+        length: files.length,
+        item: (i: number) => files[i] ?? null,
+        [Symbol.iterator]: function* () { for (const f of files) yield f }
+      }
+      for (let i = 0; i < files.length; i++) {
+        (fileList as any)[i] = files[i]
+      }
+
+      const itemList = {
+        length: items.length,
+        [Symbol.iterator]: function* () { for (const item of items) yield item }
+      }
+      for (let i = 0; i < items.length; i++) {
+        (itemList as any)[i] = {
+          ...items[i],
+          getAsFile: () => items[i].file ?? null
+        }
+      }
+
+      const clipboardData = {
+        files: fileList,
+        items: itemList,
+        getData: (type: string) => (type === 'text/plain' ? text : '')
+      }
+
+      const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent
+      Object.defineProperty(event, 'clipboardData', { value: clipboardData })
+      return event
+    }
+
+    /** Returns the inner container div that has the paste listener (containerRef) */
+    function getContainerRef(container: HTMLElement): HTMLElement {
+      // Outer div > inner div (containerRef)
+      const outer = container.firstElementChild as HTMLElement
+      const inner = outer?.firstElementChild as HTMLElement
+      return inner
+    }
+
+    it('pastes file paths for files copied from Finder', async () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const pasteEvent = createPasteEvent({
+        files: [
+          { path: '/Users/test/image.png', name: 'image.png', type: 'image/png' }
+        ]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/Users/test/image.png')
+    })
+
+    it('pastes multiple file paths joined with spaces', async () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const pasteEvent = createPasteEvent({
+        files: [
+          { path: '/Users/test/a.png', name: 'a.png', type: 'image/png' },
+          { path: '/Users/test/b.jpg', name: 'b.jpg', type: 'image/jpeg' }
+        ]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/Users/test/a.png /Users/test/b.jpg')
+    })
+
+    it('saves clipboard images and pastes the temp path', async () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const imageBlob = new Blob(['fake png data'], { type: 'image/png' })
+
+      const pasteEvent = createPasteEvent({
+        items: [{ kind: 'file', type: 'image/png', file: imageBlob }]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+
+      // Wait for async operations (blob.arrayBuffer + IPC)
+      await vi.waitFor(() => {
+        expect(mockApi.clipboardSaveImage).toHaveBeenCalledOnce()
+      })
+
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/tmp/image.png')
+    })
+
+    it('lets xterm handle text-only paste (no preventDefault)', () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const pasteEvent = createPasteEvent({ text: 'hello world' })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      // Should NOT prevent default — let xterm handle text paste
+      expect(pasteEvent.defaultPrevented).toBe(false)
+      // Should NOT write to PTY directly (xterm does it via onData)
+      expect(mockApi.ptyWrite).not.toHaveBeenCalled()
+      expect(mockApi.clipboardSaveImage).not.toHaveBeenCalled()
+    })
+
+    it('falls through to image check when files have no path', async () => {
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const imageBlob = new Blob(['fake png data'], { type: 'image/png' })
+
+      // File with no .path (like a clipboard screenshot) + image item
+      const pasteEvent = createPasteEvent({
+        files: [{ name: 'screenshot.png', type: 'image/png' }],
+        items: [{ kind: 'file', type: 'image/png', file: imageBlob }]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      expect(pasteEvent.defaultPrevented).toBe(true)
+
+      await vi.waitFor(() => {
+        expect(mockApi.clipboardSaveImage).toHaveBeenCalledOnce()
+      })
+      expect(mockApi.ptyWrite).toHaveBeenCalledWith('test-session', '/tmp/image.png')
+    })
+
+    it('handles clipboardSaveImage failure gracefully', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mockApi.clipboardSaveImage.mockRejectedValueOnce(new Error('write failed'))
+
+      const { container } = render(<Terminal sessionId="test-session" />)
+      const containerRef = getContainerRef(container)
+
+      const imageBlob = new Blob(['fake png data'], { type: 'image/png' })
+      const pasteEvent = createPasteEvent({
+        items: [{ kind: 'file', type: 'image/png', file: imageBlob }]
+      })
+
+      containerRef.dispatchEvent(pasteEvent)
+
+      await vi.waitFor(() => {
+        expect(mockApi.clipboardSaveImage).toHaveBeenCalledOnce()
+      })
+
+      // Should not crash — error is logged
+      expect(consoleSpy).toHaveBeenCalled()
+      consoleSpy.mockRestore()
+    })
   })
 })
