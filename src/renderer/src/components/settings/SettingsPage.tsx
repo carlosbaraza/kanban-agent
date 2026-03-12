@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import type { ProjectSettings } from '@shared/types'
 import { DEFAULT_SETTINGS, DEFAULT_SNIPPETS } from '@shared/types/settings'
+import { SnippetSettings } from './SnippetSettings'
 
 export function SettingsPage(): React.JSX.Element {
   const closeSettings = useUIStore((s) => s.closeSettings)
@@ -86,13 +87,16 @@ export function SettingsPage(): React.JSX.Element {
             </div>
           </div>
 
-          {/* Snippets section — placeholder until SnippetSettings is integrated */}
+          {/* Snippets section */}
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Snippets</h2>
             <p style={styles.settingDescription}>
               Terminal command shortcuts shown as buttons above the terminal
             </p>
-            {/* SnippetSettings will be embedded here in Task 8 */}
+            <SnippetSettings
+              snippets={settings.snippets ?? DEFAULT_SNIPPETS}
+              onChange={(snippets) => handleChange('snippets', snippets)}
+            />
           </div>
         </div>
 
