@@ -8,24 +8,68 @@ interface Props {
 interface State {
   hasError: boolean
   error: Error | null
+  componentStack: string | null
+  copied: boolean
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
-    this.state = { hasError: false, error: null }
+    this.state = { hasError: false, error: null, componentStack: null, copied: false }
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error('App crashed:', error, info.componentStack)
+    this.setState({ componentStack: info.componentStack ?? null })
   }
 
   handleReload = (): void => {
     window.location.reload()
+  }
+
+  buildDebugReport = (): string => {
+    const { error, componentStack } = this.state
+    const sections: string[] = []
+
+    sections.push('=== Kanban Agent Crash Report ===')
+    sections.push(`Timestamp: ${new Date().toISOString()}`)
+    sections.push(`URL: ${window.location.href}`)
+    sections.push(`Platform: ${navigator.platform}`)
+    sections.push(`User Agent: ${navigator.userAgent}`)
+    sections.push(`Viewport: ${window.innerWidth}x${window.innerHeight}`)
+    sections.push(`Device Pixel Ratio: ${window.devicePixelRatio}`)
+
+    if (error) {
+      sections.push('')
+      sections.push('--- Error ---')
+      sections.push(`Name: ${error.name}`)
+      sections.push(`Message: ${error.message}`)
+      if (error.stack) {
+        sections.push('')
+        sections.push('--- Stack Trace ---')
+        sections.push(error.stack)
+      }
+    }
+
+    if (componentStack) {
+      sections.push('')
+      sections.push('--- Component Stack ---')
+      sections.push(componentStack.trim())
+    }
+
+    return sections.join('\n')
+  }
+
+  handleCopyDebugInfo = (): void => {
+    const report = this.buildDebugReport()
+    navigator.clipboard.writeText(report).then(() => {
+      this.setState({ copied: true })
+      setTimeout(() => this.setState({ copied: false }), 2000)
+    })
   }
 
   render(): ReactNode {
@@ -102,28 +146,54 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error.message}
             </pre>
           )}
-          <button
-            onClick={this.handleReload}
-            style={{
-              backgroundColor: 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '10px 24px',
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'background-color 0.15s ease'
-            }}
-            onMouseOver={(e) =>
-              ((e.target as HTMLButtonElement).style.backgroundColor = 'var(--accent-hover)')
-            }
-            onMouseOut={(e) =>
-              ((e.target as HTMLButtonElement).style.backgroundColor = 'var(--accent)')
-            }
-          >
-            Reload Window
-          </button>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              onClick={this.handleCopyDebugInfo}
+              style={{
+                backgroundColor: 'var(--bg-surface)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                padding: '10px 24px',
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={(e) => {
+                ;(e.target as HTMLButtonElement).style.backgroundColor = 'var(--bg-hover)'
+                ;(e.target as HTMLButtonElement).style.color = 'var(--text-primary)'
+              }}
+              onMouseOut={(e) => {
+                ;(e.target as HTMLButtonElement).style.backgroundColor = 'var(--bg-surface)'
+                ;(e.target as HTMLButtonElement).style.color = 'var(--text-secondary)'
+              }}
+            >
+              {this.state.copied ? 'Copied!' : 'Copy Debug Info'}
+            </button>
+            <button
+              onClick={this.handleReload}
+              style={{
+                backgroundColor: 'var(--accent)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 8,
+                padding: '10px 24px',
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'background-color 0.15s ease'
+              }}
+              onMouseOver={(e) =>
+                ((e.target as HTMLButtonElement).style.backgroundColor = 'var(--accent-hover)')
+              }
+              onMouseOut={(e) =>
+                ((e.target as HTMLButtonElement).style.backgroundColor = 'var(--accent)')
+              }
+            >
+              Reload Window
+            </button>
+          </div>
         </div>
       )
     }
