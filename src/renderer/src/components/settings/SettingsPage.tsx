@@ -133,7 +133,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   content: {
     width: '100%',
-    maxWidth: 720,
+    maxWidth: 960,
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100%',
