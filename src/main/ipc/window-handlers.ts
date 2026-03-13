@@ -1,12 +1,11 @@
 import { ipcMain, BrowserWindow, dialog, app, shell } from 'electron'
 import { DataService } from '../services/data-service'
-import { FileWatcher } from '../services/file-watcher'
+import { WorkspaceManager } from '../services/workspace-manager'
 
 export function registerWindowHandlers(
   mainWindow: BrowserWindow,
   dataService: DataService,
-  getFileWatcher: () => FileWatcher | null,
-  setFileWatcher: (fw: FileWatcher | null) => void
+  workspaceManager: WorkspaceManager
 ): void {
   ipcMain.handle('window:open-directory', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -16,18 +15,10 @@ export function registerWindowHandlers(
   })
 
   ipcMain.handle('project:set-root', async (_, newRoot: string) => {
-    // Update DataService project root
+    // Use WorkspaceManager to switch projects
+    workspaceManager.openSingleProject(newRoot)
+    // Update the legacy dataService reference for backward compatibility
     dataService.setProjectRoot(newRoot)
-
-    // Restart file watcher with new root
-    const oldWatcher = getFileWatcher()
-    if (oldWatcher) {
-      oldWatcher.stop()
-    }
-    const newWatcher = new FileWatcher(newRoot, mainWindow)
-    newWatcher.start()
-    setFileWatcher(newWatcher)
-
     return true
   })
 

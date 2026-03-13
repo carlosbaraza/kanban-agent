@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification, Workspace, WorkspaceConfig } from '../../shared/types'
 
 declare global {
   interface Window {
@@ -98,6 +98,20 @@ declare global {
       // Shell
       openPath(path: string): Promise<string>
       openExternal(url: string): Promise<void>
+
+      // Workspace
+      workspaceList(): Promise<Workspace[]>
+      workspaceCreate(name: string, projectPaths: string[]): Promise<Workspace>
+      workspaceUpdate(id: string, updates: Partial<Workspace>): Promise<Workspace>
+      workspaceDelete(id: string): Promise<void>
+      workspaceOpen(workspaceId: string): Promise<void>
+      workspaceOpenSingle(path: string): Promise<void>
+      workspaceAddProject(path: string): Promise<void>
+      workspaceRemoveProject(path: string): Promise<void>
+      workspaceGetConfig(): Promise<WorkspaceConfig>
+      workspaceGetOpenProjects(): Promise<string[]>
+      workspaceGetActiveProject(): Promise<string | null>
+      workspaceSetActiveProject(path: string): Promise<void>
 
       // App info
       getVersion(): Promise<string>

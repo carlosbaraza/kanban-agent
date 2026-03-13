@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification } from '../shared/types'
+import type { ProjectState, Task, ActivityEntry, ProjectSettings, AppNotification, Workspace, WorkspaceConfig } from '../shared/types'
 
 // Custom APIs for renderer
 const api = {
@@ -152,6 +152,30 @@ const api = {
   // Shell
   openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+
+  // Workspace
+  workspaceList: (): Promise<Workspace[]> => ipcRenderer.invoke('workspace:list'),
+  workspaceCreate: (name: string, projectPaths: string[]): Promise<Workspace> =>
+    ipcRenderer.invoke('workspace:create', name, projectPaths),
+  workspaceUpdate: (id: string, updates: Partial<Workspace>): Promise<Workspace> =>
+    ipcRenderer.invoke('workspace:update', id, updates),
+  workspaceDelete: (id: string): Promise<void> => ipcRenderer.invoke('workspace:delete', id),
+  workspaceOpen: (workspaceId: string): Promise<void> =>
+    ipcRenderer.invoke('workspace:open', workspaceId),
+  workspaceOpenSingle: (path: string): Promise<void> =>
+    ipcRenderer.invoke('workspace:open-single', path),
+  workspaceAddProject: (path: string): Promise<void> =>
+    ipcRenderer.invoke('workspace:add-project', path),
+  workspaceRemoveProject: (path: string): Promise<void> =>
+    ipcRenderer.invoke('workspace:remove-project', path),
+  workspaceGetConfig: (): Promise<WorkspaceConfig> =>
+    ipcRenderer.invoke('workspace:get-config'),
+  workspaceGetOpenProjects: (): Promise<string[]> =>
+    ipcRenderer.invoke('workspace:get-open-projects'),
+  workspaceGetActiveProject: (): Promise<string | null> =>
+    ipcRenderer.invoke('workspace:get-active-project'),
+  workspaceSetActiveProject: (path: string): Promise<void> =>
+    ipcRenderer.invoke('workspace:set-active-project', path),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),

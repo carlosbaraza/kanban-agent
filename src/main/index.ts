@@ -10,8 +10,8 @@ import { registerNotificationHandlers } from './ipc/notification-handlers'
 import { registerWindowHandlers } from './ipc/window-handlers'
 import { registerCliHandlers } from './ipc/cli-handlers'
 import { registerUpdateHandlers } from './ipc/update-handlers'
-import { DataService } from './services/data-service'
-import { FileWatcher } from './services/file-watcher'
+import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
+import { WorkspaceManager } from './services/workspace-manager'
 import { UpdateService } from './services/update-service'
 import { buildAppMenu } from './menu'
 
@@ -26,7 +26,7 @@ process.on('unhandledRejection', (reason) => {
 const tmuxManager = new ElectronTmuxManager()
 const ptyManager = new ElectronPtyManager(tmuxManager)
 const updateService = new UpdateService()
-let fileWatcher: FileWatcher | null = null
+const workspaceManager = new WorkspaceManager()
 
 // Register custom protocol scheme for serving attachment files
 // Must be called before app is ready
@@ -54,8 +54,9 @@ function getProjectRootFromArgs(): { root: string; explicit: boolean } {
 
 const projectRootInfo = getProjectRootFromArgs()
 
-// Default project root to --project-root arg or current working directory
-const dataService = new DataService(projectRootInfo.root)
+// Open the initial project via WorkspaceManager
+workspaceManager.openSingleProject(projectRootInfo.root)
+const dataService = workspaceManager.getDataService(projectRootInfo.root)
 ptyManager.setDataService(dataService)
 
 function createWindow(): void {
@@ -74,12 +75,23 @@ function createWindow(): void {
     }
   })
 
+  // Give workspace manager reference to the window for file watchers
+  workspaceManager.setMainWindow(mainWindow)
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
 
-    // Start file watcher after window is ready
-    fileWatcher = new FileWatcher(dataService.getProjectRoot(), mainWindow)
-    fileWatcher.start()
+    // File watchers are now managed by WorkspaceManager
+    // Re-start watchers for existing projects with the window reference
+    const openPaths = workspaceManager.getOpenProjectPaths()
+    for (const projectPath of openPaths) {
+      if (!workspaceManager.getFileWatcher(projectPath)) {
+        // File watcher was created without mainWindow in openSingleProject
+        // Re-open to create watcher with window reference
+        workspaceManager.removeProjectFromWorkspace(projectPath)
+        workspaceManager.addProjectToWorkspace(projectPath)
+      }
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -98,16 +110,16 @@ function createWindow(): void {
   // Register IPC handlers
   registerPtyHandlers(ptyManager, mainWindow)
   registerTmuxHandlers(tmuxManager, dataService)
-  registerFileHandlers(dataService, () => fileWatcher)
+  registerFileHandlers(dataService, () => workspaceManager.getFileWatcher())
   registerNotificationHandlers(dataService)
   registerWindowHandlers(
     mainWindow,
     dataService,
-    () => fileWatcher,
-    (fw) => { fileWatcher = fw }
+    workspaceManager
   )
   registerCliHandlers()
   registerUpdateHandlers(mainWindow, updateService)
+  registerWorkspaceHandlers(workspaceManager)
 
   // Build and set the application menu
   const appMenu = buildAppMenu(mainWindow, updateService)
@@ -176,7 +188,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  fileWatcher?.stop()
-  fileWatcher = null
+  workspaceManager.closeAll()
   updateService.stopPeriodicCheck()
 })

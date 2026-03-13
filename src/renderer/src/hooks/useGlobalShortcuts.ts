@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 
 /**
  * Centralized global keyboard shortcut system.
@@ -22,6 +23,8 @@ export function useGlobalShortcuts(): void {
   const closeShortcutsModal = useUIStore((s) => s.closeShortcutsModal)
   const addTask = useTaskStore((s) => s.addTask)
   const projectState = useTaskStore((s) => s.projectState)
+  const toggleProjectSidebar = useWorkspaceStore((s) => s.toggleSidebar)
+  const projectSidebarVisible = useWorkspaceStore((s) => s.sidebarVisible)
 
   const isInputFocused = useCallback((): boolean => {
     const target = document.activeElement as HTMLElement | null
@@ -70,6 +73,13 @@ export function useGlobalShortcuts(): void {
             }, 0)
           }
         }
+        return
+      }
+
+      // Cmd+B — toggle project sidebar (only when 2+ projects open)
+      if (meta && e.key === 'b' && projectSidebarVisible) {
+        e.preventDefault()
+        toggleProjectSidebar()
         return
       }
 
@@ -147,6 +157,8 @@ export function useGlobalShortcuts(): void {
     closeShortcutsModal,
     addTask,
     projectState,
-    isInputFocused
+    isInputFocused,
+    toggleProjectSidebar,
+    projectSidebarVisible
   ])
 }

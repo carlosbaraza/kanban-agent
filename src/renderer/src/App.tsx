@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useGlobalShortcuts } from '@renderer/hooks/useGlobalShortcuts'
 import { AppShell, Navbar } from '@renderer/components/layout'
 import { KanbanBoard } from '@renderer/components/board'
@@ -13,6 +14,7 @@ import { CreateTaskModal, KeyboardShortcutsModal, UpdateBanner } from './compone
 function App(): React.JSX.Element {
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
   const loadNotifications = useNotificationStore((s) => s.loadNotifications)
+  const loadOpenProjects = useWorkspaceStore((s) => s.loadOpenProjects)
   const taskDetailOpen = useUIStore((s) => s.taskDetailOpen)
   const activeTaskId = useUIStore((s) => s.activeTaskId)
   const closeTaskDetail = useUIStore((s) => s.closeTaskDetail)
@@ -25,7 +27,8 @@ function App(): React.JSX.Element {
   useEffect(() => {
     loadProjectState()
     loadNotifications()
-  }, [loadProjectState, loadNotifications])
+    loadOpenProjects()
+  }, [loadProjectState, loadNotifications, loadOpenProjects])
 
   // Reload state when external changes are detected (e.g. CLI updates)
   useEffect(() => {
