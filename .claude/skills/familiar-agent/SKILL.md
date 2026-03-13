@@ -17,6 +17,10 @@ familiar agents
 
 Follow those instructions as your base workflow. The sections below provide additional context.
 
+## Important: document.md is the canonical spec location
+
+**ALWAYS** store your task spec, plan, design notes, and requirements in the task's `document.md` file at `.familiar/tasks/$FAMILIAR_TASK_ID/document.md`. This is the file the user sees in the Familiar UI. **NEVER** create separate spec/plan files elsewhere in the repo.
+
 ## Step 1: Read your context
 
 ```bash

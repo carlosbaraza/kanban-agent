@@ -425,6 +425,17 @@ When running inside a Familiar terminal, these environment variables are set:
 - \`FAMILIAR_TASK_ID\` — The ID of the current task
 - \`FAMILIAR_PROJECT_ROOT\` — The root directory of the project
 
+## Canonical Task Location
+
+**\`document.md\` is the ONLY place for task specs, plans, and design documents.** Every task has a dedicated directory at \`.familiar/tasks/<taskId>/\` containing a \`document.md\` file. This is the file the user sees and reviews in the Familiar UI.
+
+**Rules:**
+- **ALWAYS** write specs, plans, requirements, and design notes into the task's \`document.md\`
+- **NEVER** create separate spec files, plan files, or design docs elsewhere in the repo (e.g., \`docs/plan.md\`, \`PLAN.md\`, \`spec.md\`, etc.)
+- If you need to plan your approach, write it in \`document.md\` under a \`## Plan\` heading
+- If you need to document design decisions, write them in \`document.md\` under a \`## Design\` or \`## Notes\` heading
+- The task directory (\`.familiar/tasks/<taskId>/\`) is the single source of truth for everything about that task
+
 ## Agent Workflow
 
 ### 1. Read your task
@@ -493,6 +504,8 @@ familiar update $FAMILIAR_TASK_ID --title "Short descriptive title"
 \`\`\`
 
 ### 4. Do the work — log progress at milestones
+
+**Planning:** If you need to create a plan or spec before implementation, write it into \`document.md\` under a \`## Plan\` heading (below the original prompt). Never create plan files elsewhere.
 
 \`\`\`bash
 familiar log $FAMILIAR_TASK_ID "Implemented feature X — moving to tests"
