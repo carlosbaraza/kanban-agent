@@ -206,6 +206,26 @@ describe('useKeyboardNavigation', () => {
     expect(useUIStore.getState().taskDetailOpen).toBe(true)
   })
 
+  it('Enter sets pendingDetailFocus to terminal', () => {
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey('Enter'))
+    expect(useUIStore.getState().pendingDetailFocus).toBe('terminal')
+  })
+
+  it('Space opens task detail and sets pendingDetailFocus to title', () => {
+    renderHook(() =>
+      useKeyboardNavigation({ tasksByStatus, columnOrder: COLUMN_ORDER })
+    )
+
+    act(() => fireKey(' '))
+    expect(useUIStore.getState().activeTaskId).toBe('tsk_a')
+    expect(useUIStore.getState().taskDetailOpen).toBe(true)
+    expect(useUIStore.getState().pendingDetailFocus).toBe('title')
+  })
+
   it('Escape closes task detail', () => {
     useUIStore.setState({ taskDetailOpen: true, activeTaskId: 'tsk_a' })
     renderHook(() =>

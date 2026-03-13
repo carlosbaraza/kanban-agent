@@ -370,6 +370,112 @@ describe('TerminalPanel', () => {
     expect(mockApi.updateTask).not.toHaveBeenCalled()
   })
 
+  it('dispatches task-detail-focus terminal event when pendingDetailFocus is terminal and session is ready', async () => {
+    const focusEvents: string[] = []
+    const listener = (e: Event): void => {
+      focusEvents.push((e as CustomEvent).detail)
+    }
+    window.addEventListener('task-detail-focus', listener)
+
+    // Set up pending focus before rendering
+    useUIStore.setState({
+      activeTaskId: 'tsk_test01',
+      taskDetailOpen: true,
+      pendingDetailFocus: 'terminal'
+    })
+
+    await renderActive()
+
+    // Advance timers to let rAF + setTimeout fire
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(focusEvents).toContain('terminal')
+    // Flag should be cleared after consumption
+    expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+
+    window.removeEventListener('task-detail-focus', listener)
+  })
+
+  it('does NOT dispatch focus event when pendingDetailFocus is title (not terminal)', async () => {
+    const focusEvents: string[] = []
+    const listener = (e: Event): void => {
+      focusEvents.push((e as CustomEvent).detail)
+    }
+    window.addEventListener('task-detail-focus', listener)
+
+    useUIStore.setState({
+      activeTaskId: 'tsk_test01',
+      taskDetailOpen: true,
+      pendingDetailFocus: 'title'
+    })
+
+    await renderActive()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(focusEvents).not.toContain('terminal')
+    // pendingDetailFocus should remain 'title' (consumed by TaskDetailHeader, not TerminalPanel)
+    expect(useUIStore.getState().pendingDetailFocus).toBe('title')
+
+    window.removeEventListener('task-detail-focus', listener)
+  })
+
+  it('does NOT dispatch focus event when activeTaskId does not match', async () => {
+    const focusEvents: string[] = []
+    const listener = (e: Event): void => {
+      focusEvents.push((e as CustomEvent).detail)
+    }
+    window.addEventListener('task-detail-focus', listener)
+
+    useUIStore.setState({
+      activeTaskId: 'tsk_other',
+      taskDetailOpen: true,
+      pendingDetailFocus: 'terminal'
+    })
+
+    await renderActive()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(focusEvents).not.toContain('terminal')
+
+    window.removeEventListener('task-detail-focus', listener)
+  })
+
+  it('dispatches focus event when pendingDetailFocus is set after session is already active', async () => {
+    const focusEvents: string[] = []
+    const listener = (e: Event): void => {
+      focusEvents.push((e as CustomEvent).detail)
+    }
+    window.addEventListener('task-detail-focus', listener)
+
+    // Render without pending focus
+    useUIStore.setState({
+      activeTaskId: 'tsk_test01',
+      taskDetailOpen: true,
+      pendingDetailFocus: null
+    })
+
+    await renderActive()
+
+    // Now set pendingDetailFocus (simulates re-opening the same task)
+    await act(async () => {
+      useUIStore.setState({ pendingDetailFocus: 'terminal' })
+      await vi.advanceTimersByTimeAsync(100)
+    })
+
+    expect(focusEvents).toContain('terminal')
+    expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+
+    window.removeEventListener('task-detail-focus', listener)
+  })
+
   it('resets agentStatus to idle on stop when agent is running', async () => {
     const task = makeTask({ agentStatus: 'running' })
     useTaskStore.setState({

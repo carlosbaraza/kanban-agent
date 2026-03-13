@@ -144,11 +144,18 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
 
   useEffect(() => {
     if (pendingDetailFocus === 'title' && activeTaskId === task.id) {
+      // Use rAF + setTimeout to ensure the overlay is visible and focusable
+      let cancelled = false
       requestAnimationFrame(() => {
-        titleRef.current?.focus()
-        titleRef.current?.select()
-        clearPendingDetailFocus()
+        if (cancelled) return
+        setTimeout(() => {
+          if (cancelled) return
+          titleRef.current?.focus()
+          titleRef.current?.select()
+          clearPendingDetailFocus()
+        }, 30)
       })
+      return () => { cancelled = true }
     }
   }, [pendingDetailFocus, activeTaskId, task.id, clearPendingDetailFocus])
 

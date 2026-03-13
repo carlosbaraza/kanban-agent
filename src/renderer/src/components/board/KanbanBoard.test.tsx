@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useBoardStore } from '@renderer/stores/board-store'
@@ -229,6 +229,26 @@ describe('KanbanBoard', () => {
     // Drag state in board store should be cleared
     expect(useBoardStore.getState().draggedTaskId).toBeNull()
     expect(useBoardStore.getState().dragOverColumn).toBeNull()
+  })
+
+  it('sets pendingDetailFocus to terminal when a task card is clicked', () => {
+    const tasks = [
+      makeTask({ id: 'tsk_a', title: 'Clickable task', status: 'todo' })
+    ]
+    const state = makeProjectState(tasks)
+    useTaskStore.setState({ isLoading: false, projectState: state })
+
+    const { container } = render(<KanbanBoard />)
+
+    // Click on the card element itself (not the title, which has its own handler)
+    const taskCard = container.querySelector('[data-task-id="tsk_a"]')!
+    act(() => {
+      fireEvent.click(taskCard)
+    })
+
+    expect(useUIStore.getState().activeTaskId).toBe('tsk_a')
+    expect(useUIStore.getState().taskDetailOpen).toBe(true)
+    expect(useUIStore.getState().pendingDetailFocus).toBe('terminal')
   })
 
   it('dispatches focus-new-task-input when no card is keyboard-focused', async () => {

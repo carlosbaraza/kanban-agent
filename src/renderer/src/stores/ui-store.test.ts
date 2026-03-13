@@ -127,6 +127,34 @@ describe('useUIStore', () => {
     })
   })
 
+  describe('pendingDetailFocus', () => {
+    it('starts as null', () => {
+      expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+    })
+
+    it('setPendingDetailFocus sets the target', () => {
+      useUIStore.getState().setPendingDetailFocus('terminal')
+      expect(useUIStore.getState().pendingDetailFocus).toBe('terminal')
+    })
+
+    it('setPendingDetailFocus can set title target', () => {
+      useUIStore.getState().setPendingDetailFocus('title')
+      expect(useUIStore.getState().pendingDetailFocus).toBe('title')
+    })
+
+    it('clearPendingDetailFocus resets to null', () => {
+      useUIStore.getState().setPendingDetailFocus('terminal')
+      useUIStore.getState().clearPendingDetailFocus()
+      expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+    })
+
+    it('setPendingDetailFocus(null) clears the focus', () => {
+      useUIStore.getState().setPendingDetailFocus('terminal')
+      useUIStore.getState().setPendingDetailFocus(null)
+      expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+    })
+  })
+
   describe('createTaskModal', () => {
     it('opens and closes the create task modal', () => {
       expect(useUIStore.getState().createTaskModalOpen).toBe(false)

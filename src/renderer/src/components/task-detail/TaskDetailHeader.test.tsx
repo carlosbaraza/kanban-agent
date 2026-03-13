@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 import { TaskDetailHeader } from './TaskDetailHeader'
 import type { Task } from '@shared/types'
 
@@ -274,6 +275,105 @@ describe('TaskDetailHeader', () => {
       <TaskDetailHeader task={updatedTask} onUpdate={onUpdate} onClose={onClose} />
     )
     expect(screen.getByDisplayValue('Externally updated title')).toBeInTheDocument()
+  })
+
+  describe('pendingDetailFocus title consumption', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('focuses title textarea when pendingDetailFocus is title and activeTaskId matches', async () => {
+      const task = makeTask()
+      useUIStore.setState({
+        activeTaskId: 'tsk_test01',
+        taskDetailOpen: true,
+        pendingDetailFocus: 'title'
+      })
+
+      render(<TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />)
+
+      // Advance timers to let rAF + setTimeout fire
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+
+      const textarea = screen.getByDisplayValue('Test task title')
+      expect(document.activeElement).toBe(textarea)
+      expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+    })
+
+    it('does NOT focus title when pendingDetailFocus is terminal', async () => {
+      const task = makeTask()
+      useUIStore.setState({
+        activeTaskId: 'tsk_test01',
+        taskDetailOpen: true,
+        pendingDetailFocus: 'terminal'
+      })
+
+      render(<TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+
+      const textarea = screen.getByDisplayValue('Test task title')
+      expect(document.activeElement).not.toBe(textarea)
+      // Should NOT consume the terminal focus
+      expect(useUIStore.getState().pendingDetailFocus).toBe('terminal')
+    })
+
+    it('does NOT focus title when activeTaskId does not match', async () => {
+      const task = makeTask()
+      useUIStore.setState({
+        activeTaskId: 'tsk_other',
+        taskDetailOpen: true,
+        pendingDetailFocus: 'title'
+      })
+
+      render(<TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+
+      const textarea = screen.getByDisplayValue('Test task title')
+      expect(document.activeElement).not.toBe(textarea)
+    })
+
+    it('focuses title when pendingDetailFocus is set after mount (re-open)', async () => {
+      const task = makeTask()
+      useUIStore.setState({
+        activeTaskId: 'tsk_test01',
+        taskDetailOpen: true,
+        pendingDetailFocus: null
+      })
+
+      render(<TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />)
+
+      // Simulate re-opening: set pendingDetailFocus after mount
+      await act(async () => {
+        useUIStore.setState({ pendingDetailFocus: 'title' })
+        await vi.advanceTimersByTimeAsync(100)
+      })
+
+      const textarea = screen.getByDisplayValue('Test task title')
+      expect(document.activeElement).toBe(textarea)
+      expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+    })
+
+    it('still responds to task-detail-focus events (e.g. from Cmd+Enter)', () => {
+      const task = makeTask()
+      render(<TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />)
+
+      window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'title' }))
+
+      const textarea = screen.getByDisplayValue('Test task title')
+      expect(document.activeElement).toBe(textarea)
+    })
   })
 
   it('does not overwrite local edits when task prop changes during editing', () => {
