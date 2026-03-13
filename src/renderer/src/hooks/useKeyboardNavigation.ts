@@ -73,7 +73,14 @@ export function useKeyboardNavigation({
         if (newStatus) {
           e.preventDefault()
           if (selectedTaskIds.size > 0) {
-            moveTasks(Array.from(selectedTaskIds), newStatus, Infinity)
+            // Sort by current sortOrder so cards keep their relative order
+            const { projectState } = useTaskStore.getState()
+            const sortedIds = Array.from(selectedTaskIds).sort((a, b) => {
+              const taskA = projectState?.tasks.find((t) => t.id === a)
+              const taskB = projectState?.tasks.find((t) => t.id === b)
+              return (taskA?.sortOrder ?? 0) - (taskB?.sortOrder ?? 0)
+            })
+            moveTasks(sortedIds, newStatus, 0)
             clearSelection()
           } else {
             const task = getFocusedTask()

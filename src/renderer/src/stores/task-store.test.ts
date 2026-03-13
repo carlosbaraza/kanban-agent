@@ -655,6 +655,44 @@ describe('useTaskStore', () => {
       ).rejects.toThrow('Project not initialized')
     })
 
+    it('inserts tasks at the top of the target column when startIndex is 0', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'todo', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'done', sortOrder: 0 })
+      const t4 = makeTask({ id: 'tsk_d', status: 'done', sortOrder: 1 })
+      const state = makeProjectState([t1, t2, t3, t4])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_b'], 'done', 0)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      // Moved tasks should be at the top (sortOrder 0, 1), existing done tasks shifted down
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(1)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(2)
+      expect(tasks.find((t) => t.id === 'tsk_d')!.sortOrder).toBe(3)
+    })
+
+    it('preserves relative order of moved tasks based on taskIds array order', async () => {
+      const t1 = makeTask({ id: 'tsk_a', status: 'in-review', sortOrder: 0 })
+      const t2 = makeTask({ id: 'tsk_b', status: 'in-review', sortOrder: 1 })
+      const t3 = makeTask({ id: 'tsk_c', status: 'in-review', sortOrder: 2 })
+      const state = makeProjectState([t1, t2, t3])
+      useTaskStore.setState({ projectState: state })
+      mockApi.updateTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      // Pass IDs in sortOrder so they maintain their relative order
+      await useTaskStore.getState().moveTasks(['tsk_a', 'tsk_b', 'tsk_c'], 'done', 0)
+
+      const tasks = useTaskStore.getState().projectState!.tasks
+      expect(tasks.find((t) => t.id === 'tsk_a')!.sortOrder).toBe(0)
+      expect(tasks.find((t) => t.id === 'tsk_b')!.sortOrder).toBe(1)
+      expect(tasks.find((t) => t.id === 'tsk_c')!.sortOrder).toBe(2)
+    })
+
     it('ignores non-existent task ids', async () => {
       const t1 = makeTask({ id: 'tsk_a', status: 'todo', sortOrder: 0 })
       const state = makeProjectState([t1])
