@@ -153,6 +153,7 @@ export function Navbar(): React.JSX.Element {
             />
           </svg>
         </button>
+
       </div>
 
       <div className={styles.navGroupRight}>
