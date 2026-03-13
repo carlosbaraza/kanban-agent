@@ -38,6 +38,13 @@ export function useGlobalShortcuts(): void {
     const handleKeyDown = (e: KeyboardEvent): void => {
       const meta = e.metaKey || e.ctrlKey
 
+      // Cmd+Enter — focus terminal (works from anywhere in task detail)
+      if (meta && e.key === 'Enter' && taskDetailOpen) {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'terminal' }))
+        return
+      }
+
       // Cmd+K — toggle command palette (always, even in inputs)
       if (meta && e.key === 'k') {
         e.preventDefault()

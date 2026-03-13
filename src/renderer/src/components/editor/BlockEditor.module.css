@@ -78,6 +78,13 @@
   color: var(--text-tertiary) !important;
 }
 
+/* Focus outline for the editor wrapper — shows when editor content is focused */
+.editorWrapper:focus-within {
+  box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.3);
+  border-radius: var(--radius-sm);
+  transition: box-shadow 150ms ease;
+}
+
 /* Remove focus outline from BlockNote editable area */
 .editorWrapper [class*='bn-editor']:focus-visible,
 .editorWrapper [contenteditable]:focus-visible {

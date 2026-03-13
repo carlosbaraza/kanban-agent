@@ -17,9 +17,11 @@ describe('KeyboardShortcutsModal', () => {
     useUIStore.setState({ shortcutsModalOpen: true })
     render(<KeyboardShortcutsModal />)
 
-    expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument()
+    expect(screen.getByText('Shortcuts')).toBeInTheDocument()
+    expect(screen.getByText('Workflows')).toBeInTheDocument()
     expect(screen.getByText('General')).toBeInTheDocument()
     expect(screen.getByText('Board Navigation')).toBeInTheDocument()
+    expect(screen.getByText('Task Detail Navigation')).toBeInTheDocument()
     expect(screen.getByText('Task Actions')).toBeInTheDocument()
   })
 
@@ -33,11 +35,41 @@ describe('KeyboardShortcutsModal', () => {
     expect(screen.getByText('Move to Todo')).toBeInTheDocument()
   })
 
+  it('shows new task detail navigation shortcuts', () => {
+    useUIStore.setState({ shortcutsModalOpen: true })
+    render(<KeyboardShortcutsModal />)
+
+    expect(screen.getByText('Focus terminal')).toBeInTheDocument()
+    expect(screen.getByText('Title → Notes')).toBeInTheDocument()
+    expect(screen.getByText('Notes → Title')).toBeInTheDocument()
+  })
+
+  it('expands shortcut detail on click', () => {
+    useUIStore.setState({ shortcutsModalOpen: true })
+    render(<KeyboardShortcutsModal />)
+
+    // The "Close current panel" shortcut has a detail
+    const row = screen.getByText(/Close current panel/).closest('div')!
+    fireEvent.click(row)
+
+    expect(screen.getByText(/Layered dismiss/)).toBeInTheDocument()
+  })
+
+  it('switches to workflows tab', () => {
+    useUIStore.setState({ shortcutsModalOpen: true })
+    render(<KeyboardShortcutsModal />)
+
+    fireEvent.click(screen.getByTestId('workflows-tab'))
+
+    expect(screen.getByText('Quick Task Review')).toBeInTheDocument()
+    expect(screen.getByText('Triage & Prioritize')).toBeInTheDocument()
+    expect(screen.getByText('Bulk Move Tasks')).toBeInTheDocument()
+  })
+
   it('closes when clicking overlay', () => {
     useUIStore.setState({ shortcutsModalOpen: true })
     render(<KeyboardShortcutsModal />)
 
-    // Click the overlay background directly (target === currentTarget)
     const overlay = screen.getByTestId('shortcuts-overlay')
     fireEvent.click(overlay)
 
@@ -57,9 +89,9 @@ describe('KeyboardShortcutsModal', () => {
     useUIStore.setState({ shortcutsModalOpen: true })
     render(<KeyboardShortcutsModal />)
 
-    const closeButton = screen.getByText('Keyboard Shortcuts')
-      .closest('div')!
-      .querySelector('button')!
+    // Close button contains the X SVG icon
+    const svgIcon = screen.getByTestId('shortcuts-overlay').querySelector('svg')!
+    const closeButton = svgIcon.closest('button')!
     fireEvent.click(closeButton)
 
     expect(useUIStore.getState().shortcutsModalOpen).toBe(false)

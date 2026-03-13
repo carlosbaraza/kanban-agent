@@ -8,6 +8,15 @@ import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
 import styles from './BlockEditor.module.css'
 
+function getFirstTextNode(node: Node): Node | null {
+  if (node.nodeType === Node.TEXT_NODE) return node
+  for (let i = 0; i < node.childNodes.length; i++) {
+    const result = getFirstTextNode(node.childNodes[i])
+    if (result) return result
+  }
+  return null
+}
+
 interface BlockEditorProps {
   taskId: string
   initialContent?: string // markdown content
@@ -121,6 +130,60 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     wrapper.addEventListener('paste', handlePaste, { capture: true })
     return () => wrapper.removeEventListener('paste', handlePaste, { capture: true })
   }, [onPastedFileAdded])
+
+  // Listen for focus requests from keyboard navigation
+  useEffect(() => {
+    const handleFocusRequest = (e: Event): void => {
+      const target = (e as CustomEvent).detail
+      if (target === 'editor' && editor) {
+        editor.focus()
+      }
+    }
+    window.addEventListener('task-detail-focus', handleFocusRequest)
+    return () => window.removeEventListener('task-detail-focus', handleFocusRequest)
+  }, [editor])
+
+  // Handle ArrowUp at top of editor → move focus to title
+  useEffect(() => {
+    const wrapper = editorWrapperRef.current
+    if (!wrapper) return
+
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === 'ArrowUp' && !e.shiftKey && !e.metaKey && !e.altKey && !e.ctrlKey) {
+        // Check if cursor is at the very beginning of the editor
+        const selection = window.getSelection()
+        if (!selection || selection.rangeCount === 0) return
+
+        const range = selection.getRangeAt(0)
+        if (!range.collapsed) return
+
+        // Check if we're in the first block and at offset 0
+        const editorEl = wrapper.querySelector('[contenteditable]')
+        if (!editorEl) return
+
+        // Get the first text-containing block
+        const firstBlock = editorEl.querySelector('[data-node-type="blockContent"]') || editorEl.firstElementChild
+        if (!firstBlock) return
+
+        // Check if the cursor is within the first block
+        if (firstBlock.contains(range.startContainer)) {
+          // Check if we're at the very start (offset 0 of the first text node)
+          const isAtStart = range.startOffset === 0 && (
+            range.startContainer === firstBlock ||
+            range.startContainer === firstBlock.firstChild ||
+            (range.startContainer.nodeType === Node.TEXT_NODE && range.startContainer === getFirstTextNode(firstBlock))
+          )
+          if (isAtStart) {
+            e.preventDefault()
+            window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'title' }))
+          }
+        }
+      }
+    }
+
+    wrapper.addEventListener('keydown', handleKeyDown)
+    return () => wrapper.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Cleanup timer on unmount
   useEffect(() => {

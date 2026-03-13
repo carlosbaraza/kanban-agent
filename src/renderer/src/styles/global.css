@@ -373,6 +373,14 @@ pre {
   margin: 4px 0;
 }
 
+/* ==========================================================================
+   Terminal Focus Ring
+   ========================================================================== */
+
+.terminal-focus-container:focus-within {
+  box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -108,16 +108,33 @@ export function TaskDetailHeader({ task, onUpdate, onClose }: TaskDetailHeaderPr
 
   const handleTitleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
         handleTitleSubmit()
+        // Move focus to the editor/notes
+        window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'editor' }))
       } else if (e.key === 'Escape') {
         setTitleValue(task.title)
         setEditingTitle(false)
+        titleRef.current?.blur()
       }
     },
     [handleTitleSubmit, task.title]
   )
+
+  // Listen for focus requests from keyboard navigation
+  useEffect(() => {
+    const handleFocusRequest = (e: Event): void => {
+      const target = (e as CustomEvent).detail
+      if (target === 'title') {
+        titleRef.current?.focus()
+        // Select all text for easy replacement
+        titleRef.current?.select()
+      }
+    }
+    window.addEventListener('task-detail-focus', handleFocusRequest)
+    return () => window.removeEventListener('task-detail-focus', handleFocusRequest)
+  }, [])
 
   const handleStatusChange = useCallback(
     (status: TaskStatus) => {

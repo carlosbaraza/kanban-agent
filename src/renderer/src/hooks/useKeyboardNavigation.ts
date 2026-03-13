@@ -195,8 +195,22 @@ export function useKeyboardNavigation({
           break
         }
 
+        case ' ': {
+          // Open focused task detail and focus the title for editing
+          e.preventDefault()
+          const spaceTask = getFocusedTask()
+          if (spaceTask) {
+            openTaskDetail(spaceTask.id)
+            // Signal that the title should receive focus
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'title' }))
+            }, 50)
+          }
+          break
+        }
+
         case 'Enter': {
-          // Open focused task detail
+          // Open focused task detail (terminal gets focus by default)
           e.preventDefault()
           const task = getFocusedTask()
           if (task) {
@@ -223,9 +237,9 @@ export function useKeyboardNavigation({
         }
 
         case 'c': {
-          // Open create task input in focused column
+          // Open create task input only in todo column
           e.preventDefault()
-          if (onCreateTask) {
+          if (onCreateTask && columnOrder[focusedColumnIndex] === 'todo') {
             onCreateTask(focusedColumnIndex)
           }
           break

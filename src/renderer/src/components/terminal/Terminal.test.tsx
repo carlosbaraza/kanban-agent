@@ -122,13 +122,9 @@ describe('Terminal', () => {
     expect(mockFit).toHaveBeenCalled()
   })
 
-  it('calls focus after mount via delayed timer', async () => {
-    vi.useFakeTimers()
+  it('does not auto-focus after mount (requires Cmd+Enter)', () => {
     render(<Terminal sessionId="test-session" />)
     expect(mockFocus).not.toHaveBeenCalled()
-    vi.advanceTimersByTime(100)
-    expect(mockFocus).toHaveBeenCalled()
-    vi.useRealTimers()
   })
 
   it('registers onPtyData listener for the session', () => {
@@ -240,16 +236,12 @@ describe('Terminal', () => {
     expect(mockPtyDataCleanup).toHaveBeenCalledOnce()
   })
 
-  it('re-focuses terminal when visible prop changes to true', () => {
-    vi.useFakeTimers()
-    const { rerender } = render(<Terminal sessionId="test-session" visible={false} />)
+  it('focuses terminal when task-detail-focus terminal event is dispatched', () => {
+    render(<Terminal sessionId="test-session" />)
     mockFocus.mockClear()
 
-    rerender(<Terminal sessionId="test-session" visible={true} />)
-    expect(mockFocus).not.toHaveBeenCalled()
-    vi.advanceTimersByTime(100)
+    window.dispatchEvent(new CustomEvent('task-detail-focus', { detail: 'terminal' }))
     expect(mockFocus).toHaveBeenCalled()
-    vi.useRealTimers()
   })
 
   it('handles WebGL addon failure gracefully', () => {

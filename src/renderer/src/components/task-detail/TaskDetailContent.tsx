@@ -15,7 +15,7 @@ interface TaskDetailContentProps {
   visible?: boolean
 }
 
-export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): React.JSX.Element {
+export function TaskDetailContent({ taskId }: TaskDetailContentProps): React.JSX.Element {
   const editorPanelWidth = useUIStore((s) => s.editorPanelWidth)
   const setEditorPanelWidth = useUIStore((s) => s.setEditorPanelWidth)
   const [documentContent, setDocumentContent] = useState<string | undefined>(undefined)
@@ -119,7 +119,7 @@ export function TaskDetailContent({ taskId, visible }: TaskDetailContentProps): 
           </div>
         }
         right={
-          <TerminalPanel taskId={taskId} visible={visible} />
+          <TerminalPanel taskId={taskId} />
         }
         defaultLeftWidth={editorPanelWidth}
         minLeftWidth={200}

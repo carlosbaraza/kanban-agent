@@ -7,11 +7,10 @@ import '@xterm/xterm/css/xterm.css'
 
 interface TerminalProps {
   sessionId: string
-  visible?: boolean
   onReady?: () => void
 }
 
-export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.JSX.Element {
+export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<XTerm | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -104,14 +103,11 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     termRef.current = term
     fitAddonRef.current = fitAddon
 
-    // Fit after DOM settles and focus the terminal
-    // Use a short delay to win the focus race against BlockNote editor auto-focus
+    // Fit after DOM settles
     requestAnimationFrame(() => {
       fitAddon.fit()
     })
-    const focusTimer = setTimeout(() => {
-      term.focus()
-    }, 100)
+    // No auto-focus — use Cmd+Enter or click to focus terminal
 
     // Connect to PTY data
     const cleanup = window.api.onPtyData((sid: string, data: string) => {
@@ -209,7 +205,6 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     onReady?.()
 
     return (): void => {
-      clearTimeout(focusTimer)
       clearTimeout(resizeTimer)
       resizeObserver.disconnect()
       containerRef.current?.removeEventListener('paste', handlePaste, { capture: true })
@@ -219,19 +214,30 @@ export function Terminal({ sessionId, visible, onReady }: TerminalProps): React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])
 
-  // Re-focus terminal when it becomes visible (e.g. task detail opened via Enter)
-  // Use a short delay to win the focus race against BlockNote editor auto-focus
+  // Listen for focus requests from keyboard navigation (Cmd+Enter)
   useEffect(() => {
-    if (visible && termRef.current) {
-      const timer = setTimeout(() => {
-        termRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
+    const handleFocusRequest = (e: Event): void => {
+      const target = (e as CustomEvent).detail
+      if (target === 'terminal' && termRef.current) {
+        termRef.current.focus()
+      }
     }
-  }, [visible])
+    window.addEventListener('task-detail-focus', handleFocusRequest)
+    return () => window.removeEventListener('task-detail-focus', handleFocusRequest)
+  }, [])
 
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'hidden', padding: 8 }}>
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        padding: 8,
+        borderRadius: 'var(--radius-sm)',
+        transition: 'box-shadow 150ms ease'
+      }}
+      className="terminal-focus-container"
+    >
       <div
         ref={containerRef}
         style={{ width: '100%', height: '100%' }}
