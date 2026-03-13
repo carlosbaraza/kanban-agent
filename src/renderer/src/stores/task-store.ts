@@ -160,8 +160,12 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     await window.api.writeProjectState(newState)
     set({ projectState: newState })
 
-    // Warm up tmux session for non-archived tasks (fire-and-forget)
-    if (task.status !== 'archived') {
+    // Warm up tmux session for non-archived tasks (fire-and-forget).
+    // Skip warmup for forked tasks — the session file copy must happen
+    // in pty.create() before the tmux session starts, otherwise the warmup
+    // sends --session-id (creating an empty session) before the parent's
+    // session file can be copied.
+    if (task.status !== 'archived' && !task.forkedFrom) {
       window.api.warmupTmuxSession(task.id).catch(() => {
         // Warmup failure is non-critical — terminal will create session on open
       })
