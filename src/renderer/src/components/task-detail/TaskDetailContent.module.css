@@ -63,6 +63,85 @@
   gap: 4px;
 }
 
+/* Fork indicators */
+.forkLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-bottom: 1px solid var(--border);
+}
+
+.forkLink:hover {
+  background-color: var(--bg-hover);
+}
+
+.forkLink strong {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.forkDeleted {
+  color: var(--text-tertiary);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.forksSection {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.forksSectionHeader {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.forksList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.forkItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.forkItem:hover {
+  background-color: var(--bg-hover);
+}
+
+.forkItemId {
+  color: var(--accent);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+.forkItemTitle {
+  color: var(--text-primary);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .activitySection {
   display: flex;
   flex-direction: column;

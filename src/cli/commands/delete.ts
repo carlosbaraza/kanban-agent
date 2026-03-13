@@ -4,6 +4,7 @@ import {
   getProjectRoot,
   readProjectState,
   writeProjectState,
+  writeTask,
   deleteTaskDir
 } from '../lib/file-ops'
 
@@ -29,6 +30,15 @@ export function deleteCommand(): Command {
       }
 
       const task = state.tasks[taskIndex]
+
+      // If this task was forked, remove it from the parent's forks array
+      if (task.forkedFrom) {
+        const parent = state.tasks.find((t) => t.id === task.forkedFrom)
+        if (parent && parent.forks) {
+          parent.forks = parent.forks.filter((fid) => fid !== id)
+          await writeTask(root, parent)
+        }
+      }
 
       // Remove from state
       state.tasks.splice(taskIndex, 1)

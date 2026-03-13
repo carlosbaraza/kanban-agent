@@ -105,6 +105,27 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
                   <div className={styles.editorArea}>Loading...</div>
                 )}
               </div>
+              {task.forkedFrom && (
+                <div
+                  className={styles.forkLink}
+                  onClick={() => {
+                    const { openTaskDetail } = useUIStore.getState()
+                    openTaskDetail(task.forkedFrom!)
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="18" r="3" />
+                    <circle cx="6" cy="6" r="3" />
+                    <circle cx="18" cy="6" r="3" />
+                    <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
+                    <path d="M12 12v3" />
+                  </svg>
+                  <span>Forked from <strong>{task.forkedFrom}</strong></span>
+                  {!useTaskStore.getState().getTaskById(task.forkedFrom) && (
+                    <span className={styles.forkDeleted}>(deleted)</span>
+                  )}
+                </div>
+              )}
               <TaskFiles taskId={taskId} />
               {pastedFiles.length > 0 && (
                 <div className={styles.pastedFilesSection}>
@@ -118,6 +139,37 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
                         onRemove={() => handleRemovePastedFile(pf.filename)}
                       />
                     ))}
+                  </div>
+                </div>
+              )}
+              {task.forks && task.forks.length > 0 && (
+                <div className={styles.forksSection}>
+                  <div className={styles.forksSectionHeader}>Forks</div>
+                  <div className={styles.forksList}>
+                    {task.forks.map((forkId) => {
+                      const forkTask = useTaskStore.getState().getTaskById(forkId)
+                      return (
+                        <div
+                          key={forkId}
+                          className={styles.forkItem}
+                          onClick={() => {
+                            const { openTaskDetail } = useUIStore.getState()
+                            openTaskDetail(forkId)
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="18" r="3" />
+                            <circle cx="6" cy="6" r="3" />
+                            <circle cx="18" cy="6" r="3" />
+                            <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
+                            <path d="M12 12v3" />
+                          </svg>
+                          <span className={styles.forkItemId}>{forkId}</span>
+                          {forkTask && <span className={styles.forkItemTitle}>{forkTask.title}</span>}
+                          {!forkTask && <span className={styles.forkDeleted}>(deleted)</span>}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}

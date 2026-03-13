@@ -137,5 +137,26 @@ describe('useUIStore', () => {
       useUIStore.getState().closeCreateTaskModal()
       expect(useUIStore.getState().createTaskModalOpen).toBe(false)
     })
+
+    it('opens modal in fork mode with parent task ID', () => {
+      useUIStore.getState().openCreateTaskModalForFork('tsk_parent')
+      expect(useUIStore.getState().createTaskModalOpen).toBe(true)
+      expect(useUIStore.getState().createTaskForkFrom).toBe('tsk_parent')
+    })
+
+    it('clears fork state when modal is closed', () => {
+      useUIStore.getState().openCreateTaskModalForFork('tsk_parent')
+      useUIStore.getState().closeCreateTaskModal()
+      expect(useUIStore.getState().createTaskModalOpen).toBe(false)
+      expect(useUIStore.getState().createTaskForkFrom).toBeNull()
+    })
+
+    it('openCreateTaskModal clears any existing fork state', () => {
+      useUIStore.getState().openCreateTaskModalForFork('tsk_parent')
+      useUIStore.getState().closeCreateTaskModal()
+      useUIStore.getState().openCreateTaskModal()
+      expect(useUIStore.getState().createTaskModalOpen).toBe(true)
+      expect(useUIStore.getState().createTaskForkFrom).toBeNull()
+    })
   })
 })

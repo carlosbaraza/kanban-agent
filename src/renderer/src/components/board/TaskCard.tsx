@@ -403,6 +403,17 @@ export function TaskCard({
             style={{ backgroundColor: AGENT_STATUS_COLORS[task.agentStatus] }}
             aria-label={`Agent: ${task.agentStatus}`}
           />
+          {task.forkedFrom && (
+            <span className={styles.forkIcon} aria-label="Forked task" title={`Forked from ${task.forkedFrom}`}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="18" r="3" />
+                <circle cx="6" cy="6" r="3" />
+                <circle cx="18" cy="6" r="3" />
+                <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
+                <path d="M12 12v3" />
+              </svg>
+            </span>
+          )}
           {hasUnread && <span className={styles.notificationDot} aria-label="Has notifications" />}
         </div>
 

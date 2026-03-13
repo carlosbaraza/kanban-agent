@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ProjectState, Task, TaskStatus, Priority, LabelConfig } from '@shared/types'
+import type { ProjectState, Task, TaskStatus, Priority, LabelConfig, ActivityEntry } from '@shared/types'
 import { useNotificationStore } from './notification-store'
 
 interface TaskStore {
@@ -15,6 +15,7 @@ interface TaskStore {
 
   // Task CRUD
   addTask: (title: string, options?: Partial<Task>) => Promise<Task>
+  forkTask: (parentId: string, title: string, documentContent?: string) => Promise<Task>
   updateTask: (task: Task) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
   deleteTasks: (taskIds: string[]) => Promise<void>
@@ -169,6 +170,51 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     return task
   },
 
+  forkTask: async (parentId: string, title: string, documentContent?: string): Promise<Task> => {
+    const { projectState, addTask, updateTask: storeUpdateTask } = get()
+    if (!projectState) throw new Error('Project not initialized')
+
+    const parent = projectState.tasks.find((t: Task) => t.id === parentId)
+    if (!parent) throw new Error(`Parent task not found: ${parentId}`)
+
+    // Create the child task with forkedFrom set
+    const child = await addTask(title, { forkedFrom: parentId })
+
+    // Write document content if provided
+    if (documentContent) {
+      await window.api.writeTaskDocument(child.id, documentContent)
+    }
+
+    // Update parent's forks array
+    const freshParent = get().projectState?.tasks.find((t: Task) => t.id === parentId)
+    if (freshParent) {
+      const updatedParent = {
+        ...freshParent,
+        forks: [...(freshParent.forks ?? []), child.id]
+      }
+      await storeUpdateTask(updatedParent)
+    }
+
+    // Log activity on both tasks
+    const now = new Date().toISOString()
+    const parentActivity: ActivityEntry = {
+      id: `act_${Date.now()}_p`,
+      timestamp: now,
+      type: 'status_change',
+      message: `Forked to ${child.id}`
+    }
+    const childActivity: ActivityEntry = {
+      id: `act_${Date.now()}_c`,
+      timestamp: now,
+      type: 'status_change',
+      message: `Forked from ${parentId}`
+    }
+    await window.api.appendActivity(parentId, parentActivity)
+    await window.api.appendActivity(child.id, childActivity)
+
+    return child
+  },
+
   updateTask: async (task: Task): Promise<void> => {
     const { projectState } = get()
     if (!projectState) throw new Error('Project not initialized')
@@ -205,6 +251,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Kill tmux sessions before deleting
     await killTmuxSessionsForTask(taskId)
 
+    // If this task was forked from a parent, remove it from the parent's forks array
+    const deletedTask = projectState.tasks.find((t: Task) => t.id === taskId)
+    if (deletedTask?.forkedFrom) {
+      const parent = projectState.tasks.find((t: Task) => t.id === deletedTask.forkedFrom)
+      if (parent && parent.forks) {
+        const updatedParent = { ...parent, forks: parent.forks.filter((id) => id !== taskId) }
+        await window.api.updateTask(updatedParent)
+        // Update in the state array too
+        const idx = projectState.tasks.indexOf(parent)
+        if (idx !== -1) projectState.tasks[idx] = updatedParent
+      }
+    }
+
     // Delete task files
     await window.api.deleteTask(taskId)
 
@@ -220,6 +279,20 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (!projectState) throw new Error('Project not initialized')
 
     const idSet = new Set(taskIds)
+
+    // Clean up parent forks arrays for forked tasks being deleted
+    for (const taskId of taskIds) {
+      const deletedTask = projectState.tasks.find((t: Task) => t.id === taskId)
+      if (deletedTask?.forkedFrom && !idSet.has(deletedTask.forkedFrom)) {
+        const parent = projectState.tasks.find((t: Task) => t.id === deletedTask.forkedFrom)
+        if (parent && parent.forks) {
+          const updatedParent = { ...parent, forks: parent.forks.filter((id) => !idSet.has(id)) }
+          await window.api.updateTask(updatedParent)
+          const idx = projectState.tasks.indexOf(parent)
+          if (idx !== -1) projectState.tasks[idx] = updatedParent
+        }
+      }
+    }
 
     // Kill tmux sessions and delete task files for each
     for (const taskId of taskIds) {

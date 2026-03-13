@@ -27,4 +27,6 @@ export interface Task {
   sortOrder: number // within column
   attachments?: string[] // filenames in task attachments folder
   pastedFiles?: TaskPastedFile[] // large pasted content stored as files
+  forkedFrom?: string // parent task ID when this task was forked
+  forks?: string[] // child task IDs created by forking this task
 }

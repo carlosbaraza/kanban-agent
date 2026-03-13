@@ -1,13 +1,20 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as path from 'path'
 import { taskIdToUuid, resolveClaudeSessionCommand } from './claude-session'
 
 const mockExistsSync = vi.fn()
+const mockCopyFileSync = vi.fn()
+const mockMkdirSync = vi.fn()
 const mockHomedir = vi.fn().mockReturnValue('/Users/testuser')
 
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>()
-  return { ...actual, existsSync: (...args: Parameters<typeof actual.existsSync>) => mockExistsSync(...args) }
+  return {
+    ...actual,
+    existsSync: (...args: Parameters<typeof actual.existsSync>) => mockExistsSync(...args),
+    copyFileSync: (...args: Parameters<typeof actual.copyFileSync>) => mockCopyFileSync(...args),
+    mkdirSync: (...args: Parameters<typeof actual.mkdirSync>) => mockMkdirSync(...args)
+  }
 })
 
 vi.mock('os', async (importOriginal) => {
@@ -34,6 +41,8 @@ describe('resolveClaudeSessionCommand', () => {
   beforeEach(() => {
     mockHomedir.mockReturnValue('/Users/testuser')
     mockExistsSync.mockReset()
+    mockCopyFileSync.mockReset()
+    mockMkdirSync.mockReset()
   })
 
   it('returns command unchanged if no --resume $VAR pattern', () => {
@@ -116,5 +125,102 @@ describe('resolveClaudeSessionCommand', () => {
 
     const uuid = taskIdToUuid('tsk_abc')
     expect(result).toBe(`claude --session-id "${uuid}"`)
+  })
+
+  describe('forking', () => {
+    it('copies parent session file when forking and parent session exists', () => {
+      const childUuid = taskIdToUuid('tsk_child')
+      const parentUuid = taskIdToUuid('tsk_parent')
+      const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
+      const childSessionFile = path.join(projectDir, `${childUuid}.jsonl`)
+      const parentSessionFile = path.join(projectDir, `${parentUuid}.jsonl`)
+
+      // Child session doesn't exist, parent session does
+      mockExistsSync.mockImplementation((p: string) => {
+        if (p === childSessionFile) return false
+        if (p === parentSessionFile) return true
+        return false
+      })
+
+      const result = resolveClaudeSessionCommand(
+        'claude --resume $FAMILIAR_TASK_ID',
+        'tsk_child',
+        '/project',
+        'tsk_parent'
+      )
+
+      expect(mockCopyFileSync).toHaveBeenCalledWith(parentSessionFile, childSessionFile)
+      expect(result).toBe(`claude --resume "${childUuid}"`)
+    })
+
+    it('falls back to fresh session when parent session file does not exist', () => {
+      const childUuid = taskIdToUuid('tsk_child')
+
+      mockExistsSync.mockReturnValue(false)
+
+      const result = resolveClaudeSessionCommand(
+        'claude --resume $FAMILIAR_TASK_ID',
+        'tsk_child',
+        '/project',
+        'tsk_parent'
+      )
+
+      expect(mockCopyFileSync).not.toHaveBeenCalled()
+      expect(result).toBe(`claude --session-id "${childUuid}"`)
+    })
+
+    it('uses existing child session when it already exists (subsequent launches)', () => {
+      const childUuid = taskIdToUuid('tsk_child')
+      const childSessionFile = path.join(
+        '/Users/testuser', '.claude', 'projects', '-project', `${childUuid}.jsonl`
+      )
+
+      // Child session already exists
+      mockExistsSync.mockImplementation((p: string) => p === childSessionFile)
+
+      const result = resolveClaudeSessionCommand(
+        'claude --resume $FAMILIAR_TASK_ID',
+        'tsk_child',
+        '/project',
+        'tsk_parent'
+      )
+
+      // Should NOT copy — just resume the existing child session
+      expect(mockCopyFileSync).not.toHaveBeenCalled()
+      expect(result).toBe(`claude --resume "${childUuid}"`)
+    })
+
+    it('handles copy failure gracefully and falls back to fresh session', () => {
+      const childUuid = taskIdToUuid('tsk_child')
+      const parentUuid = taskIdToUuid('tsk_parent')
+      const projectDir = path.join('/Users/testuser', '.claude', 'projects', '-project')
+      const childSessionFile = path.join(projectDir, `${childUuid}.jsonl`)
+      const parentSessionFile = path.join(projectDir, `${parentUuid}.jsonl`)
+
+      mockExistsSync.mockImplementation((p: string) => {
+        if (p === childSessionFile) return false
+        if (p === parentSessionFile) return true
+        return false
+      })
+      mockCopyFileSync.mockImplementation(() => {
+        throw new Error('EACCES: permission denied')
+      })
+
+      const result = resolveClaudeSessionCommand(
+        'claude --resume $FAMILIAR_TASK_ID',
+        'tsk_child',
+        '/project',
+        'tsk_parent'
+      )
+
+      expect(result).toBe(`claude --session-id "${childUuid}"`)
+    })
+
+    it('ignores forkedFrom when command has no --resume $VAR pattern', () => {
+      const cmd = 'claude --dangerously-skip-permissions'
+      const result = resolveClaudeSessionCommand(cmd, 'tsk_child', '/project', 'tsk_parent')
+      expect(result).toBe(cmd)
+      expect(mockCopyFileSync).not.toHaveBeenCalled()
+    })
   })
 })

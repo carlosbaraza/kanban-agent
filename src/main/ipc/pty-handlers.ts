@@ -5,9 +5,9 @@ export function registerPtyHandlers(
   ptyManager: ElectronPtyManager,
   mainWindow: BrowserWindow
 ): void {
-  ipcMain.handle('pty:create', async (_event, taskId: string, paneId: string, cwd: string) => {
+  ipcMain.handle('pty:create', async (_event, taskId: string, paneId: string, cwd: string, forkedFrom?: string) => {
     try {
-      return await ptyManager.create(taskId, paneId, cwd)
+      return await ptyManager.create(taskId, paneId, cwd, forkedFrom)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('pty:create failed:', message)

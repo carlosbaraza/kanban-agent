@@ -208,7 +208,7 @@ export class ElectronPtyManager implements IPtyManager {
     return this._tmuxPath
   }
 
-  async create(taskId: string, paneId: string, cwd: string): Promise<string> {
+  async create(taskId: string, paneId: string, cwd: string, forkedFrom?: string): Promise<string> {
     const validCwd = getValidCwd(cwd)
     const env = getShellEnv()
 
@@ -298,7 +298,8 @@ export class ElectronPtyManager implements IPtyManager {
           const resolvedCommand = resolveClaudeSessionCommand(
             settings.defaultCommand,
             taskId,
-            cwd
+            cwd,
+            forkedFrom
           )
           this._tmux.sendKeys(tmuxSessionName, resolvedCommand).catch((err) => {
             console.warn('Failed to send default command:', err)

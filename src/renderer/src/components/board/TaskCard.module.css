@@ -114,6 +114,13 @@
   box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
 }
 
+.forkIcon {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  opacity: 0.6;
+}
+
 .notificationDot {
   flex-shrink: 0;
   width: 7px;

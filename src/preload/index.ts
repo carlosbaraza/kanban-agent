@@ -54,8 +54,8 @@ const api = {
     ipcRenderer.invoke('clipboard:save-image', arrayBuffer, mimeType),
 
   // PTY operations
-  ptyCreate: (taskId: string, paneId: string, cwd: string): Promise<string> =>
-    ipcRenderer.invoke('pty:create', taskId, paneId, cwd),
+  ptyCreate: (taskId: string, paneId: string, cwd: string, forkedFrom?: string): Promise<string> =>
+    ipcRenderer.invoke('pty:create', taskId, paneId, cwd, forkedFrom),
   ptyCreatePlain: (taskId: string, paneId: string, cwd: string): Promise<string> =>
     ipcRenderer.invoke('pty:create-plain', taskId, paneId, cwd),
   ptyWrite: (sessionId: string, data: string): Promise<void> =>

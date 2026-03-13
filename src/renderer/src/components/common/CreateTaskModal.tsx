@@ -13,8 +13,10 @@ interface PendingPastedFile {
 
 export function CreateTaskModal(): React.JSX.Element | null {
   const open = useUIStore((s) => s.createTaskModalOpen)
+  const forkFrom = useUIStore((s) => s.createTaskForkFrom)
   const closeModal = useUIStore((s) => s.closeCreateTaskModal)
   const addTask = useTaskStore((s) => s.addTask)
+  const forkTask = useTaskStore((s) => s.forkTask)
 
   const [title, setTitle] = useState('')
   const [pendingPasted, setPendingPasted] = useState<PendingPastedFile[]>([])
@@ -43,9 +45,14 @@ export function CreateTaskModal(): React.JSX.Element | null {
     const taskTitle = lines[0].trim()
     const documentContent = lines.slice(1).join('\n').trim() || undefined
     if (taskTitle || pendingPasted.length > 0) {
-      const task = await addTask(taskTitle || 'Untitled')
-      if (documentContent) {
-        await window.api.writeTaskDocument(task.id, documentContent)
+      let task: import('@shared/types').Task
+      if (forkFrom) {
+        task = await forkTask(forkFrom, taskTitle || 'Untitled', documentContent)
+      } else {
+        task = await addTask(taskTitle || 'Untitled')
+        if (documentContent) {
+          await window.api.writeTaskDocument(task.id, documentContent)
+        }
       }
       // Save pasted files
       if (pendingPasted.length > 0) {
@@ -61,7 +68,7 @@ export function CreateTaskModal(): React.JSX.Element | null {
       setPendingPasted([])
       closeModal()
     }
-  }, [title, pendingPasted, addTask, closeModal])
+  }, [title, pendingPasted, addTask, forkTask, forkFrom, closeModal])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -91,7 +98,19 @@ export function CreateTaskModal(): React.JSX.Element | null {
   return (
     <div style={styles.overlay} onClick={handleOverlayClick}>
       <div style={styles.wrapper}>
-        <div style={styles.header}>New Task</div>
+        <div style={styles.header}>{forkFrom ? 'Fork Task' : 'New Task'}</div>
+        {forkFrom && (
+          <div style={styles.forkBadge}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="18" r="3" />
+              <circle cx="6" cy="6" r="3" />
+              <circle cx="18" cy="6" r="3" />
+              <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
+              <path d="M12 12v3" />
+            </svg>
+            Forking from {forkFrom}
+          </div>
+        )}
         <textarea
           ref={inputRef}
           style={styles.input}
@@ -163,6 +182,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#8e8ea0',
     borderBottom: '1px solid #2a2a3c',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  forkBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 18px',
+    fontSize: 12,
+    fontWeight: 500,
+    color: '#5e6ad2',
+    fontFamily: "'SF Mono', 'Fira Code', monospace",
+    borderBottom: '1px solid #2a2a3c',
+    backgroundColor: 'rgba(94, 106, 210, 0.06)'
   },
   input: {
     width: '100%',

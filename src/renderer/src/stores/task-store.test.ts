@@ -21,7 +21,9 @@ const mockApi = {
   markNotificationRead: vi.fn().mockResolvedValue(undefined),
   markNotificationsByTaskRead: vi.fn().mockResolvedValue(undefined),
   markAllNotificationsRead: vi.fn().mockResolvedValue(undefined),
-  clearNotifications: vi.fn().mockResolvedValue(undefined)
+  clearNotifications: vi.fn().mockResolvedValue(undefined),
+  appendActivity: vi.fn().mockResolvedValue(undefined),
+  writeTaskDocument: vi.fn().mockResolvedValue(undefined)
 }
 
 Object.defineProperty(globalThis, 'window', {
@@ -982,6 +984,131 @@ describe('useTaskStore', () => {
 
       expect(useTaskStore.getState().projectState).toEqual(newState)
       expect(useTaskStore.getState().isLoading).toBe(false)
+    })
+  })
+
+  describe('forkTask', () => {
+    it('creates a child task with forkedFrom set to parent ID', async () => {
+      const parent = makeTask({ id: 'tsk_parent' })
+      const state = makeProjectState([parent])
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+
+      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked task')
+
+      expect(child.forkedFrom).toBe('tsk_parent')
+      expect(child.title).toBe('Forked task')
+    })
+
+    it('updates parent forks array with child ID', async () => {
+      const parent = makeTask({ id: 'tsk_parent' })
+      const state = makeProjectState([parent])
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+
+      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked task')
+
+      // Parent should have been updated with forks array
+      const updatedParent = useTaskStore.getState().getTaskById('tsk_parent')
+      expect(updatedParent?.forks).toContain(child.id)
+    })
+
+    it('logs activity on both parent and child', async () => {
+      const parent = makeTask({ id: 'tsk_parent' })
+      const state = makeProjectState([parent])
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+
+      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked task')
+
+      // Should log on parent and child
+      expect(mockApi.appendActivity).toHaveBeenCalledTimes(2)
+      const parentCall = mockApi.appendActivity.mock.calls.find(
+        (c: [string, { message: string }]) => c[0] === 'tsk_parent'
+      )
+      const childCall = mockApi.appendActivity.mock.calls.find(
+        (c: [string, { message: string }]) => c[0] === child.id
+      )
+      expect(parentCall?.[1].message).toContain(`Forked to ${child.id}`)
+      expect(childCall?.[1].message).toContain('Forked from tsk_parent')
+    })
+
+    it('writes document content when provided', async () => {
+      const parent = makeTask({ id: 'tsk_parent' })
+      const state = makeProjectState([parent])
+      useTaskStore.setState({ projectState: state })
+      mockApi.createTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+
+      const child = await useTaskStore.getState().forkTask('tsk_parent', 'Forked', 'Some notes')
+
+      expect(mockApi.writeTaskDocument).toHaveBeenCalledWith(child.id, 'Some notes')
+    })
+
+    it('throws if parent task does not exist', async () => {
+      useTaskStore.setState({ projectState: makeProjectState([]) })
+
+      await expect(
+        useTaskStore.getState().forkTask('tsk_nonexistent', 'Forked task')
+      ).rejects.toThrow('Parent task not found')
+    })
+  })
+
+  describe('deleteTask — fork cleanup', () => {
+    it('removes deleted task from parent forks array', async () => {
+      const parent = makeTask({ id: 'tsk_parent', forks: ['tsk_child'] })
+      const child = makeTask({ id: 'tsk_child', forkedFrom: 'tsk_parent' })
+      const state = makeProjectState([parent, child])
+      useTaskStore.setState({ projectState: state })
+      mockApi.deleteTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().deleteTask('tsk_child')
+
+      // Parent should have been updated to remove child from forks
+      expect(mockApi.updateTask).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'tsk_parent', forks: [] })
+      )
+    })
+
+    it('does not touch parent if deleted task has no forkedFrom', async () => {
+      const task = makeTask({ id: 'tsk_regular' })
+      const state = makeProjectState([task])
+      useTaskStore.setState({ projectState: state })
+      mockApi.deleteTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().deleteTask('tsk_regular')
+
+      // updateTask should NOT be called for parent cleanup
+      expect(mockApi.updateTask).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('deleteTasks — fork cleanup', () => {
+    it('removes deleted tasks from their parents forks arrays', async () => {
+      const parent = makeTask({ id: 'tsk_parent', forks: ['tsk_child1', 'tsk_child2'] })
+      const child1 = makeTask({ id: 'tsk_child1', forkedFrom: 'tsk_parent' })
+      const child2 = makeTask({ id: 'tsk_child2', forkedFrom: 'tsk_parent' })
+      const state = makeProjectState([parent, child1, child2])
+      useTaskStore.setState({ projectState: state })
+      mockApi.deleteTask.mockResolvedValue(undefined)
+      mockApi.writeProjectState.mockResolvedValue(undefined)
+      mockApi.updateTask.mockResolvedValue(undefined)
+
+      await useTaskStore.getState().deleteTasks(['tsk_child1', 'tsk_child2'])
+
+      expect(mockApi.updateTask).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'tsk_parent', forks: [] })
+      )
     })
   })
 })

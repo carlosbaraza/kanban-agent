@@ -25,7 +25,8 @@ export function addCommand(): Command {
     .option('-p, --priority <priority>', 'Priority (urgent, high, medium, low, none)', 'none')
     .option('-s, --status <status>', 'Initial status (todo, in-progress, in-review, done, archived)', 'todo')
     .option('-l, --labels <labels>', 'Comma-separated labels')
-    .action(async (rawTitle: string, opts: { priority: string; status: string; labels?: string }) => {
+    .option('--fork-from <taskId>', 'Fork from an existing task (copies session context)')
+    .action(async (rawTitle: string, opts: { priority: string; status: string; labels?: string; forkFrom?: string }) => {
       const root = getProjectRoot()
 
       // Support multi-line: first line is the title, rest goes into the document
@@ -65,11 +66,21 @@ export function addCommand(): Command {
         }
       }
 
+      // Validate fork-from parent exists if specified
+      if (opts.forkFrom) {
+        const parentExists = state.tasks.some((t) => t.id === opts.forkFrom)
+        if (!parentExists) {
+          console.error(chalk.red(`Parent task not found: ${opts.forkFrom}`))
+          process.exit(1)
+        }
+      }
+
       const task = createTask(title, {
         status: opts.status as TaskStatus,
         priority: opts.priority as Priority,
         labels,
-        sortOrder: 0
+        sortOrder: 0,
+        ...(opts.forkFrom ? { forkedFrom: opts.forkFrom } : {})
       })
 
       // Create task directory with files
@@ -88,6 +99,28 @@ export function addCommand(): Command {
         type: 'created',
         message: `Task created: ${title}`
       })
+
+      // Handle fork relationships
+      if (opts.forkFrom) {
+        // Update parent's forks array
+        const parent = state.tasks.find((t) => t.id === opts.forkFrom)!
+        parent.forks = [...(parent.forks ?? []), task.id]
+        await writeTask(root, parent)
+
+        // Log activity on both tasks
+        await appendActivity(root, opts.forkFrom, {
+          id: generateActivityId(),
+          timestamp: task.createdAt,
+          type: 'status_change',
+          message: `Forked to ${task.id}`
+        })
+        await appendActivity(root, task.id, {
+          id: generateActivityId(),
+          timestamp: task.createdAt,
+          type: 'status_change',
+          message: `Forked from ${opts.forkFrom}`
+        })
+      }
 
       // Update state
       state.tasks.push(task)
@@ -121,6 +154,9 @@ export function addCommand(): Command {
       console.log(chalk.dim(`  Priority: ${task.priority}`))
       if (labels.length > 0) {
         console.log(chalk.dim(`  Labels:   ${labels.join(', ')}`))
+      }
+      if (opts.forkFrom) {
+        console.log(chalk.dim(`  Forked:   from ${opts.forkFrom}`))
       }
     })
 }
