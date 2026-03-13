@@ -27,6 +27,7 @@ import {
 import { createTask } from '../../shared/utils/task-utils'
 import { generateActivityId } from '../../shared/utils/id-generator'
 import { buildSettingsSection } from './agents'
+import { resolveProjectRoot } from './open'
 
 describe('CLI commands (via file-ops)', () => {
   let tmpDir: string
@@ -384,6 +385,35 @@ describe('CLI commands (via file-ops)', () => {
 
       const result = await readSettings(tmpDir)
       expect(result.simplifyTaskTitles).toBe(true)
+    })
+  })
+
+  describe('resolveProjectRoot', () => {
+    it('returns current directory when no path given', () => {
+      const result = resolveProjectRoot()
+      expect(result).toBe(process.cwd())
+    })
+
+    it('returns the directory when given a directory path', async () => {
+      const result = resolveProjectRoot(tmpDir)
+      expect(result).toBe(tmpDir)
+    })
+
+    it('returns parent directory when given a file path', async () => {
+      const filePath = path.join(tmpDir, 'test-file.txt')
+      await fs.writeFile(filePath, 'hello', 'utf-8')
+      const result = resolveProjectRoot(filePath)
+      expect(result).toBe(tmpDir)
+    })
+
+    it('returns resolved path for non-existent path', () => {
+      const result = resolveProjectRoot('/nonexistent/path/to/somewhere')
+      expect(result).toBe('/nonexistent/path/to/somewhere')
+    })
+
+    it('resolves relative paths to absolute', () => {
+      const result = resolveProjectRoot('.')
+      expect(result).toBe(process.cwd())
     })
   })
 
