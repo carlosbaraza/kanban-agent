@@ -103,6 +103,17 @@
   box-shadow: var(--shadow-focus);
 }
 
+/* Multi-selected colour also wins over notification orange */
+.cardMultiSelected.cardNotified {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cardMultiSelected.cardNotified:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+}
+
 .notificationDot {
   flex-shrink: 0;
   width: 7px;

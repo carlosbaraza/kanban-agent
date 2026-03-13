@@ -1,0 +1,178 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { TaskCard } from './TaskCard'
+import type { Task } from '@shared/types'
+
+// Mock dnd-kit
+vi.mock('@dnd-kit/sortable', () => ({
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: vi.fn(),
+    transform: null,
+    transition: null,
+    isDragging: false
+  })
+}))
+
+// Mock stores
+const mockNotifications: any[] = []
+vi.mock('@renderer/stores/notification-store', () => ({
+  useNotificationStore: (selector: any) => {
+    const state = {
+      notifications: mockNotifications,
+      markReadByTaskId: vi.fn()
+    }
+    return selector(state)
+  }
+}))
+
+vi.mock('@renderer/stores/task-store', () => ({
+  useTaskStore: () => ({
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    deleteTasks: vi.fn(),
+    moveTasks: vi.fn(),
+    setTasksPriority: vi.fn()
+  })
+}))
+
+vi.mock('@renderer/stores/board-store', () => ({
+  useBoardStore: (selector: any) => {
+    const state = {
+      selectedTaskIds: new Set<string>(),
+      clearSelection: vi.fn()
+    }
+    return selector(state)
+  }
+}))
+
+// Mock window.api
+;(window as any).api = {
+  readTaskDocument: vi.fn().mockResolvedValue(''),
+  readProjectState: vi.fn().mockResolvedValue({ labels: [] }),
+  watchProjectDir: vi.fn().mockReturnValue(vi.fn())
+}
+
+// CSS module mock returns class names matching the key
+vi.mock('./TaskCard.module.css', () => ({
+  default: {
+    card: 'card',
+    cardSelected: 'cardSelected',
+    cardMultiSelected: 'cardMultiSelected',
+    cardDragging: 'cardDragging',
+    cardFocused: 'cardFocused',
+    cardNotified: 'cardNotified',
+    topRow: 'topRow',
+    agentDot: 'agentDot',
+    agentRunning: 'agentRunning',
+    title: 'title',
+    titleInput: 'titleInput',
+    bottomRow: 'bottomRow',
+    label: 'label',
+    notificationDot: 'notificationDot',
+    priorityBtn: 'priorityBtn',
+    priorityDropdown: 'priorityDropdown',
+    priorityOption: 'priorityOption',
+    priorityOptionActive: 'priorityOptionActive',
+    descriptionPreview: 'descriptionPreview',
+    descriptionLine: 'descriptionLine',
+    attachmentThumbs: 'attachmentThumbs',
+    attachmentThumb: 'attachmentThumb',
+    attachmentMore: 'attachmentMore',
+    pastedFileIndicators: 'pastedFileIndicators',
+    pastedFileChip: 'pastedFileChip',
+    footer: 'footer',
+    footerSpacer: 'footerSpacer',
+    snippetBtn: 'snippetBtn',
+    snippetBtnPrimary: 'snippetBtnPrimary',
+    snippetBtnIcon: 'snippetBtnIcon',
+    snippetBtnSent: 'snippetBtnSent',
+    overlayWrapper: 'overlayWrapper',
+    selectionBadge: 'selectionBadge',
+    stackedCard: 'stackedCard'
+  }
+}))
+
+const makeTask = (overrides: Partial<Task> = {}): Task => ({
+  id: 'tsk_test1',
+  title: 'Test task',
+  status: 'todo',
+  priority: 'none',
+  labels: [],
+  agentStatus: 'idle',
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  sortOrder: 0,
+  ...overrides
+})
+
+describe('TaskCard — outline class precedence', () => {
+  beforeEach(() => {
+    mockNotifications.length = 0
+  })
+
+  it('applies cardSelected class when selected', () => {
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} isSelected />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).toContain('cardSelected')
+  })
+
+  it('applies cardNotified class when task has unread notifications', () => {
+    mockNotifications.push({ id: 'n1', taskId: 'tsk_test1', read: false })
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).toContain('cardNotified')
+  })
+
+  it('applies both cardSelected and cardNotified when selected with unread notifications', () => {
+    mockNotifications.push({ id: 'n1', taskId: 'tsk_test1', read: false })
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} isSelected />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).toContain('cardSelected')
+    expect(card.className).toContain('cardNotified')
+  })
+
+  it('applies both cardMultiSelected and cardNotified when multi-selected with unread notifications', () => {
+    mockNotifications.push({ id: 'n1', taskId: 'tsk_test1', read: false })
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} isMultiSelected />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).toContain('cardMultiSelected')
+    expect(card.className).toContain('cardNotified')
+  })
+
+  it('applies both cardFocused and cardNotified when focused with unread notifications', () => {
+    mockNotifications.push({ id: 'n1', taskId: 'tsk_test1', read: false })
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} isFocused />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).toContain('cardFocused')
+    expect(card.className).toContain('cardNotified')
+  })
+
+  it('does not apply cardNotified when no unread notifications exist', () => {
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).not.toContain('cardNotified')
+  })
+
+  it('does not apply cardNotified when notifications are read', () => {
+    mockNotifications.push({ id: 'n1', taskId: 'tsk_test1', read: true })
+    const { container } = render(
+      <TaskCard task={makeTask()} onClick={vi.fn()} />
+    )
+    const card = container.firstElementChild!
+    expect(card.className).not.toContain('cardNotified')
+  })
+})
