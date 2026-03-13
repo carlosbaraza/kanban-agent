@@ -255,17 +255,23 @@ export function KanbanColumn({
         }
         ;(e.target as HTMLTextAreaElement).blur()
       }
-      // ArrowDown at last line: exit input and start navigating tasks
+      // ArrowDown at last visual line: exit input and start navigating tasks.
+      // We let the browser handle ArrowDown first, then check if the cursor
+      // actually moved. If it didn't, the cursor was on the last visual line
+      // (accounting for soft-wrapped text, not just hard newlines).
       if (e.key === 'ArrowDown') {
         const textarea = e.target as HTMLTextAreaElement
-        const { selectionStart, selectionEnd, value } = textarea
+        const { selectionStart, selectionEnd } = textarea
         const isCollapsed = selectionStart === selectionEnd
-        const textAfterCursor = value.substring(selectionEnd)
-        const hasMoreLinesBelow = textAfterCursor.includes('\n')
-        if (isCollapsed && !hasMoreLinesBelow) {
-          e.preventDefault()
-          textarea.blur()
-          onInputExit?.()
+        if (isCollapsed) {
+          const posBefore = selectionEnd
+          // Let the browser handle the ArrowDown natively, then check
+          requestAnimationFrame(() => {
+            if (textarea.selectionStart === posBefore && textarea.selectionEnd === posBefore) {
+              textarea.blur()
+              onInputExit?.()
+            }
+          })
         }
       }
     },

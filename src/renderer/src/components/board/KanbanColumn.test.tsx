@@ -335,6 +335,94 @@ describe('KanbanColumn — input focus guard', () => {
   })
 })
 
+describe('KanbanColumn — ArrowDown exit behavior', () => {
+  beforeEach(() => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0)
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls onInputExit when ArrowDown is pressed and cursor does not move (last visual line)', () => {
+    const onInputExit = vi.fn()
+    render(<KanbanColumn {...defaultProps} onInputExit={onInputExit} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'Hello' } })
+
+    // Set cursor at end of text (last line)
+    textarea.selectionStart = 5
+    textarea.selectionEnd = 5
+
+    // ArrowDown won't move cursor since we're at the end — rAF callback fires synchronously
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+
+    expect(onInputExit).toHaveBeenCalled()
+  })
+
+  it('does not call onInputExit when cursor has more lines below (hard newline)', () => {
+    const onInputExit = vi.fn()
+    render(<KanbanColumn {...defaultProps} onInputExit={onInputExit} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'Line 1\nLine 2' } })
+
+    // Place cursor at end of first line
+    textarea.selectionStart = 6
+    textarea.selectionEnd = 6
+
+    // Mock: browser ArrowDown would move cursor to line 2
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      // Simulate browser moving cursor down to next line
+      textarea.selectionStart = 13
+      textarea.selectionEnd = 13
+      cb(0)
+      return 0
+    })
+
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+
+    expect(onInputExit).not.toHaveBeenCalled()
+  })
+
+  it('does not call onInputExit when selection is not collapsed', () => {
+    const onInputExit = vi.fn()
+    render(<KanbanColumn {...defaultProps} onInputExit={onInputExit} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'Hello' } })
+
+    // Non-collapsed selection
+    textarea.selectionStart = 0
+    textarea.selectionEnd = 5
+
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+
+    expect(onInputExit).not.toHaveBeenCalled()
+  })
+
+  it('does not prevent default so browser can handle ArrowDown normally', () => {
+    render(<KanbanColumn {...defaultProps} />)
+
+    const textarea = screen.getByPlaceholderText(/Task title/i) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'Line 1\nLine 2' } })
+
+    textarea.selectionStart = 6
+    textarea.selectionEnd = 6
+
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+    textarea.dispatchEvent(event)
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled()
+  })
+})
+
 describe('KanbanColumn — drag target highlighting', () => {
   afterEach(() => {
     mockIsOver = false
