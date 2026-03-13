@@ -5,7 +5,7 @@ import { execFileSync } from 'child_process'
 import { IPtyManager } from '../../shared/platform/pty'
 import { ElectronTmuxManager } from './electron-tmux'
 import type { DataService } from '../services/data-service'
-import { resolveClaudeSessionCommand } from '../services/claude-session'
+import { resolveClaudeSessionCommand, ensureForkSessionCopied } from '../services/claude-session'
 
 interface PtySession {
   id: string
@@ -217,6 +217,11 @@ export class ElectronPtyManager implements IPtyManager {
     env.FAMILIAR_PROJECT_ROOT = cwd
     env.FAMILIAR_SETTINGS_PATH = `${cwd}/.familiar/settings.json`
 
+    // Copy parent's Claude session file for forked tasks (before tmux session creation)
+    if (forkedFrom) {
+      ensureForkSessionCopied(taskId, forkedFrom, cwd)
+    }
+
     const tmuxPath = this._getTmuxPath()
 
     let ptyProcess: pty.IPty
@@ -298,8 +303,7 @@ export class ElectronPtyManager implements IPtyManager {
           const resolvedCommand = resolveClaudeSessionCommand(
             settings.defaultCommand,
             taskId,
-            cwd,
-            forkedFrom
+            cwd
           )
           this._tmux.sendKeys(tmuxSessionName, resolvedCommand).catch((err) => {
             console.warn('Failed to send default command:', err)

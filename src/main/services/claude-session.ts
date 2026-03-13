@@ -32,21 +32,55 @@ function getClaudeProjectDir(projectRoot: string): string {
 }
 
 /**
+ * Copy the parent task's Claude session file to the child task's UUID path.
+ * This is called when a forked task's terminal is first created, ensuring
+ * the child gets the parent's full conversation history.
+ *
+ * Returns true if the copy was performed, false if skipped (child already
+ * has a session, or parent session doesn't exist).
+ */
+export function ensureForkSessionCopied(
+  taskId: string,
+  forkedFrom: string,
+  projectRoot: string
+): boolean {
+  const childUuid = taskIdToUuid(taskId)
+  const parentUuid = taskIdToUuid(forkedFrom)
+  const claudeProjectDir = getClaudeProjectDir(projectRoot)
+  const childSessionFile = path.join(claudeProjectDir, `${childUuid}.jsonl`)
+  const parentSessionFile = path.join(claudeProjectDir, `${parentUuid}.jsonl`)
+
+  // Don't copy if child already has its own session
+  if (fs.existsSync(childSessionFile)) {
+    return false
+  }
+
+  if (!fs.existsSync(parentSessionFile)) {
+    console.warn(`Parent session file not found for fork from ${forkedFrom}, will start fresh`)
+    return false
+  }
+
+  try {
+    fs.mkdirSync(claudeProjectDir, { recursive: true })
+    fs.copyFileSync(parentSessionFile, childSessionFile)
+    console.log(`Copied session from ${forkedFrom} to ${taskId}`)
+    return true
+  } catch (err) {
+    console.warn(`Failed to copy parent session for fork: ${err}`)
+    return false
+  }
+}
+
+/**
  * Resolve a Claude default command that contains `--resume $SOME_VAR` (or similar)
  * into either `--resume <uuid>` (if a prior session exists) or `--session-id <uuid>`
  * (if starting fresh). This avoids the interactive resume picker showing up when no
  * session matches the task ID.
- *
- * When `forkedFrom` is set and no session file exists for the current task yet,
- * the parent's session file is copied to the child's UUID path. This gives the
- * forked task the parent's full conversation history on first launch, while
- * ensuring both sessions diverge independently from the fork point.
  */
 export function resolveClaudeSessionCommand(
   command: string,
   taskId: string,
-  projectRoot: string,
-  forkedFrom?: string
+  projectRoot: string
 ): string {
   // Match --resume followed by a shell variable (e.g. $FAMILIAR_TASK_ID)
   const resumePattern = /--resume\s+["']?\$\w+["']?/
@@ -60,27 +94,8 @@ export function resolveClaudeSessionCommand(
   if (hasExistingSession) {
     // Resume the existing session by its deterministic UUID
     return command.replace(resumePattern, `--resume "${sessionUuid}"`)
+  } else {
+    // Start a fresh session with the deterministic UUID (no resume picker)
+    return command.replace(resumePattern, `--session-id "${sessionUuid}"`)
   }
-
-  // If forking and parent session exists, copy it to the child's path
-  if (forkedFrom) {
-    const parentUuid = taskIdToUuid(forkedFrom)
-    const parentSessionFile = path.join(claudeProjectDir, `${parentUuid}.jsonl`)
-    if (fs.existsSync(parentSessionFile)) {
-      try {
-        // Ensure the directory exists
-        fs.mkdirSync(claudeProjectDir, { recursive: true })
-        fs.copyFileSync(parentSessionFile, sessionFile)
-        return command.replace(resumePattern, `--resume "${sessionUuid}"`)
-      } catch (err) {
-        console.warn(`Failed to copy parent session for fork: ${err}`)
-        // Fall through to fresh session
-      }
-    } else {
-      console.warn(`Parent session file not found for fork from ${forkedFrom}, starting fresh`)
-    }
-  }
-
-  // Start a fresh session with the deterministic UUID (no resume picker)
-  return command.replace(resumePattern, `--session-id "${sessionUuid}"`)
 }
