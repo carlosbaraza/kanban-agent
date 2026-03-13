@@ -9,7 +9,7 @@ import { KanbanBoard } from '@renderer/components/board'
 import { CommandPalette } from './components/command-palette'
 import { TaskDetail } from './components/task-detail'
 import { SettingsPage } from './components/settings'
-import { CreateTaskModal, KeyboardShortcutsModal, UpdateBanner } from './components/common'
+import { AboutModal, CreateTaskModal, KeyboardShortcutsModal, UpdateBanner } from './components/common'
 
 function App(): React.JSX.Element {
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
@@ -72,6 +72,7 @@ function App(): React.JSX.Element {
         <CommandPalette />
         <CreateTaskModal />
         <KeyboardShortcutsModal />
+        <AboutModal />
         {settingsOpen && <SettingsPage />}
         {Array.from(mountedTaskIds).map((taskId) => (
           <TaskDetail
