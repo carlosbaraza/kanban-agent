@@ -67,6 +67,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
             <polyline points="5 3 9 7 5 11" />
           )}
         </svg>
+        {sidebarExpanded && <span className={styles.toggleLabel}>Collapse</span>}
       </button>
 
       {/* Project list */}
