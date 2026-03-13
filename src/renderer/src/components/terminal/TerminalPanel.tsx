@@ -320,7 +320,7 @@ const panelStyles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     width: '100%',
     height: '100%',
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     fontSize: '13px',
     fontFamily: "'SF Mono', monospace"
   },
@@ -359,9 +359,9 @@ const panelStyles: Record<string, React.CSSProperties> = {
     transition: 'opacity 0.15s, background-color 0.15s'
   },
   stopButton: {
-    border: '1px solid rgba(231, 76, 60, 0.3)',
-    color: '#e74c3c',
-    backgroundColor: 'rgba(231, 76, 60, 0.08)'
+    border: '1px solid color-mix(in srgb, var(--priority-urgent) 30%, transparent)',
+    color: 'var(--priority-urgent)',
+    backgroundColor: 'color-mix(in srgb, var(--priority-urgent) 8%, transparent)'
   },
   stoppedContainer: {
     display: 'flex',
@@ -375,7 +375,7 @@ const panelStyles: Record<string, React.CSSProperties> = {
   },
   stoppedIcon: {
     fontSize: '28px',
-    color: '#e74c3c',
+    color: 'var(--priority-urgent)',
     lineHeight: 1
   },
   stoppedTitle: {
@@ -386,7 +386,7 @@ const panelStyles: Record<string, React.CSSProperties> = {
   },
   stoppedMessage: {
     fontSize: '13px',
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     textAlign: 'center' as const,
     lineHeight: 1.5,
     maxWidth: '360px',

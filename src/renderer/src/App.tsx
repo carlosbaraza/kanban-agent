@@ -11,6 +11,7 @@ import { TaskDetail } from './components/task-detail'
 import { SettingsPage } from './components/settings'
 import { CreateTaskModal, KeyboardShortcutsModal, UpdateBanner } from './components/common'
 import { WorkspacePicker } from './components/workspace-picker'
+import { ThemeProvider } from './components/ThemeProvider'
 
 function App(): React.JSX.Element {
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
@@ -32,6 +33,19 @@ function App(): React.JSX.Element {
     loadProjectState()
     loadNotifications()
     loadOpenProjects()
+
+    // Load theme preferences from settings
+    window.api
+      .readSettings()
+      .then((settings) => {
+        const store = useUIStore.getState()
+        if (settings.themeMode) store.setThemeMode(settings.themeMode)
+        if (settings.darkTheme) store.setDarkTheme(settings.darkTheme)
+        if (settings.lightTheme) store.setLightTheme(settings.lightTheme)
+      })
+      .catch(() => {
+        /* use defaults */
+      })
   }, [loadProjectState, loadNotifications, loadOpenProjects])
 
   // Auto-show workspace picker on initial load when no project is initialized
@@ -100,7 +114,7 @@ function App(): React.JSX.Element {
   }, [openOnboarding])
 
   return (
-    <>
+    <ThemeProvider>
       <UpdateBanner />
       <Navbar />
       <AppShell>
@@ -119,7 +133,7 @@ function App(): React.JSX.Element {
         ))}
       </AppShell>
       {showWorkspacePicker && <WorkspacePicker />}
-    </>
+    </ThemeProvider>
   )
 }
 

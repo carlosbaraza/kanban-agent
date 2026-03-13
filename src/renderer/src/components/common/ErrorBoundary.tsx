@@ -175,7 +175,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={this.handleReload}
               style={{
                 backgroundColor: 'var(--accent)',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 border: 'none',
                 borderRadius: 8,
                 padding: '10px 24px',

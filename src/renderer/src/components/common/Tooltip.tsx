@@ -180,7 +180,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
     backgroundColor: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255,255,255,0.05)',
+    boxShadow: 'var(--shadow-lg), 0 0 1px var(--overlay-faint)',
     fontSize: '12px',
     lineHeight: 1.5,
     color: 'var(--text-secondary)',

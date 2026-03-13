@@ -141,11 +141,11 @@ export function CommandPalette(): React.JSX.Element | null {
 
 function StatusDot({ status }: { status: TaskStatus }): React.JSX.Element {
   const colorMap: Record<TaskStatus, string> = {
-    todo: '#f0f0f4',
-    'in-progress': '#5e6ad2',
-    'in-review': '#e89b3e',
-    done: '#27ae60',
-    archived: '#6b7280'
+    todo: 'var(--status-todo)',
+    'in-progress': 'var(--status-in-progress)',
+    'in-review': 'var(--status-in-review)',
+    done: 'var(--status-done)',
+    archived: 'var(--status-archived)'
   }
   return (
     <span
@@ -154,7 +154,7 @@ function StatusDot({ status }: { status: TaskStatus }): React.JSX.Element {
         width: 8,
         height: 8,
         borderRadius: '50%',
-        backgroundColor: colorMap[status] ?? '#5c5c6e'
+        backgroundColor: colorMap[status] ?? 'var(--agent-idle)'
       }}
     />
   )
@@ -178,8 +178,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: 560,
     borderRadius: 8,
-    border: '1px solid #2a2a3c',
-    backgroundColor: '#1a1a27',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
     boxShadow: '0 16px 70px rgba(0, 0, 0, 0.5)',
     overflow: 'hidden'
   },
@@ -192,10 +192,10 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '14px 18px',
     fontSize: 15,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: '#f0f0f4',
+    color: 'var(--text-primary)',
     backgroundColor: 'transparent',
     border: 'none',
-    borderBottom: '1px solid #2a2a3c',
+    borderBottom: '1px solid var(--border)',
     outline: 'none',
     boxSizing: 'border-box'
   },
@@ -206,7 +206,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   empty: {
     padding: '24px 18px',
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     fontSize: 13,
     textAlign: 'center'
   },
@@ -219,7 +219,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 10,
     padding: '8px 18px',
     fontSize: 13,
-    color: '#f0f0f4',
+    color: 'var(--text-primary)',
     cursor: 'pointer',
     borderRadius: 0,
     transition: 'background-color 100ms ease'
@@ -229,7 +229,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     width: 20,
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     fontSize: 14,
     flexShrink: 0
   },
@@ -240,7 +240,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap'
   },
   itemMeta: {
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     fontSize: 11,
     fontFamily: "'SF Mono', 'Fira Code', monospace",
     flexShrink: 0
@@ -259,9 +259,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0 5px',
     fontSize: 11,
     fontFamily: "'SF Mono', 'Fira Code', monospace",
-    color: '#8e8ea0',
-    backgroundColor: '#232334',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-elevated)',
     borderRadius: 4,
-    border: '1px solid #2a2a3c'
+    border: '1px solid var(--border)'
   }
 }

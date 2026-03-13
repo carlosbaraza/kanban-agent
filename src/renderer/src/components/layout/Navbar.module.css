@@ -78,8 +78,8 @@
   border-radius: var(--radius-full);
   font-size: 9px;
   font-weight: var(--font-weight-bold);
-  background-color: #e74c3c;
-  color: #fff;
+  background-color: var(--priority-urgent);
+  color: var(--text-primary);
   line-height: 1;
   padding: 0 3px;
   pointer-events: none;
@@ -261,6 +261,6 @@
 .copiedBadge {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  color: #4caf50;
+  color: var(--status-done);
   flex-shrink: 0;
 }

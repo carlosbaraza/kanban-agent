@@ -32,22 +32,22 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
         cursorAccent: cssVar('--bg-primary'),
         selectionBackground: cssVar('--accent-subtle'),
         selectionForeground: cssVar('--text-primary'),
-        black: cssVar('--bg-surface'),
-        red: cssVar('--status-archived'),
-        green: cssVar('--status-done'),
-        yellow: cssVar('--status-in-progress'),
-        blue: cssVar('--accent'),
-        magenta: '#b07cd8',
-        cyan: '#56b6c2',
-        white: cssVar('--text-primary'),
-        brightBlack: cssVar('--text-tertiary'),
-        brightRed: '#ff6b6b',
-        brightGreen: '#2ecc71',
-        brightYellow: '#f7dc6f',
-        brightBlue: cssVar('--accent-hover'),
-        brightMagenta: '#c49de8',
-        brightCyan: '#6ec8d4',
-        brightWhite: '#ffffff'
+        black: cssVar('--term-black'),
+        red: cssVar('--term-red'),
+        green: cssVar('--term-green'),
+        yellow: cssVar('--term-yellow'),
+        blue: cssVar('--term-blue'),
+        magenta: cssVar('--term-magenta'),
+        cyan: cssVar('--term-cyan'),
+        white: cssVar('--term-white'),
+        brightBlack: cssVar('--term-bright-black'),
+        brightRed: cssVar('--term-bright-red'),
+        brightGreen: cssVar('--term-bright-green'),
+        brightYellow: cssVar('--term-bright-yellow'),
+        brightBlue: cssVar('--term-bright-blue'),
+        brightMagenta: cssVar('--term-bright-magenta'),
+        brightCyan: cssVar('--term-bright-cyan'),
+        brightWhite: cssVar('--term-bright-white')
       },
       fontSize: 13,
       fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
@@ -64,8 +64,9 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
     term.open(containerRef.current)
 
     // Try WebGL renderer for better performance
+    let webglAddon: WebglAddon | null = null
     try {
-      const webglAddon = new WebglAddon()
+      webglAddon = new WebglAddon()
       term.loadAddon(webglAddon)
     } catch {
       console.warn('WebGL renderer not available, falling back to canvas')
@@ -204,9 +205,52 @@ export function Terminal({ sessionId, onReady }: TerminalProps): React.JSX.Eleme
 
     onReady?.()
 
+    // Watch for theme changes and update xterm colors in-place
+    const themeObserver = new MutationObserver(() => {
+      const newStyles = getComputedStyle(document.documentElement)
+      const v = (name: string): string => newStyles.getPropertyValue(name).trim()
+      term.options.theme = {
+        background: v('--bg-primary'),
+        foreground: v('--text-primary'),
+        cursor: v('--accent'),
+        cursorAccent: v('--bg-primary'),
+        selectionBackground: v('--accent-subtle'),
+        selectionForeground: v('--text-primary'),
+        black: v('--term-black'),
+        red: v('--term-red'),
+        green: v('--term-green'),
+        yellow: v('--term-yellow'),
+        blue: v('--term-blue'),
+        magenta: v('--term-magenta'),
+        cyan: v('--term-cyan'),
+        white: v('--term-white'),
+        brightBlack: v('--term-bright-black'),
+        brightRed: v('--term-bright-red'),
+        brightGreen: v('--term-bright-green'),
+        brightYellow: v('--term-bright-yellow'),
+        brightBlue: v('--term-bright-blue'),
+        brightMagenta: v('--term-bright-magenta'),
+        brightCyan: v('--term-bright-cyan'),
+        brightWhite: v('--term-bright-white')
+      }
+      // Clear WebGL texture cache to force re-render with updated colors
+      try {
+        if (webglAddon) {
+          webglAddon.clearTextureAtlas()
+        }
+      } catch {
+        /* ignore if not available */
+      }
+    })
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    })
+
     return (): void => {
       clearTimeout(resizeTimer)
       resizeObserver.disconnect()
+      themeObserver.disconnect()
       containerRef.current?.removeEventListener('paste', handlePaste, { capture: true })
       cleanup()
       term.dispose()

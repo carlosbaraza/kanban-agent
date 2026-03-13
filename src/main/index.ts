@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, protocol, net, Menu } from 'electron'
+import { app, BrowserWindow, shell, protocol, net, nativeTheme, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { ElectronTmuxManager } from './platform/electron-tmux'
@@ -77,6 +77,27 @@ function createWindow(): void {
 
   // Give workspace manager reference to the window for file watchers
   workspaceManager.setMainWindow(mainWindow)
+
+  // FOUC Prevention: inject theme before showing the window
+  mainWindow.webContents.once('dom-ready', async () => {
+    try {
+      const settings = await dataService.readSettings()
+      const mode = settings.themeMode || 'system'
+      const dark = settings.darkTheme || 'familiar-dark'
+      const light = settings.lightTheme || 'familiar-light'
+      let themeId: string
+      if (mode === 'dark') themeId = dark
+      else if (mode === 'light') themeId = light
+      else themeId = nativeTheme.shouldUseDarkColors ? dark : light
+      await mainWindow.webContents.executeJavaScript(
+        `document.documentElement.setAttribute('data-theme', '${themeId}')`
+      )
+    } catch {
+      await mainWindow.webContents.executeJavaScript(
+        `document.documentElement.setAttribute('data-theme', 'familiar-dark')`
+      )
+    }
+  })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()

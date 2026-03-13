@@ -32,19 +32,19 @@ const emptyStyles: Record<string, React.CSSProperties> = {
   },
   icon: {
     fontSize: 32,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     marginBottom: 4
   },
   title: {
     fontSize: 14,
     fontWeight: 500,
-    color: '#f0f0f4',
+    color: 'var(--text-primary)',
     margin: 0,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
   description: {
     fontSize: 13,
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     margin: 0,
     maxWidth: 280,
     lineHeight: 1.5
@@ -54,8 +54,8 @@ const emptyStyles: Record<string, React.CSSProperties> = {
     padding: '6px 16px',
     fontSize: 13,
     fontWeight: 500,
-    color: '#f0f0f4',
-    backgroundColor: '#5e6ad2',
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--accent)',
     border: 'none',
     borderRadius: 6,
     cursor: 'pointer',

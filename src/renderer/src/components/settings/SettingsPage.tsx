@@ -7,6 +7,7 @@ import { DEFAULT_LABELS } from '@shared/constants'
 import { SnippetSettings } from './SnippetSettings'
 import { LabelSettings } from './LabelSettings'
 import { WorkspacesSettings } from './WorkspacesSettings'
+import { AppearanceSettings } from './AppearanceSettings'
 
 export function SettingsPage(): React.JSX.Element {
   const closeSettings = useUIStore((s) => s.closeSettings)
@@ -78,6 +79,12 @@ export function SettingsPage(): React.JSX.Element {
         </div>
 
         <div style={styles.body}>
+          {/* Appearance section */}
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Appearance</h2>
+            <AppearanceSettings />
+          </div>
+
           {/* Terminal section */}
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Terminal</h2>
@@ -346,8 +353,8 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
     transition: 'background-color 0.15s ease'
   },
   toggleButtonActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.3)',
-    borderColor: 'rgba(99, 102, 241, 0.5)'
+    backgroundColor: 'var(--accent-subtle)',
+    borderColor: 'var(--accent)'
   },
   toggleKnob: {
     display: 'block',
@@ -362,7 +369,7 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
   },
   toggleKnobActive: {
     transform: 'translateX(18px)',
-    backgroundColor: '#818cf8'
+    backgroundColor: 'var(--accent)'
   },
   saveButton: {
     padding: '6px 14px',
@@ -370,9 +377,9 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
     fontWeight: 500,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     borderRadius: '5px',
-    border: '1px solid rgba(99, 102, 241, 0.4)',
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    color: '#818cf8',
+    border: '1px solid var(--accent)',
+    backgroundColor: 'var(--accent-subtle)',
+    color: 'var(--accent)',
     cursor: 'pointer'
   }
 }

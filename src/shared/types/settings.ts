@@ -35,6 +35,12 @@ export interface ProjectSettings {
   codingAgent?: CodingAgent
   /** Whether to skip the doctor check during onboarding */
   skipDoctor?: boolean
+  /** Theme mode: system follows OS, or force light/dark */
+  themeMode?: 'system' | 'light' | 'dark'
+  /** Selected dark theme preset ID */
+  darkTheme?: string
+  /** Selected light theme preset ID */
+  lightTheme?: string
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [
@@ -45,5 +51,8 @@ export const DEFAULT_SETTINGS: ProjectSettings = {
   defaultCommand:
     'claude --dangerously-skip-permissions --resume $FAMILIAR_TASK_ID',
   snippets: DEFAULT_SNIPPETS,
-  labels: undefined // Populated from DEFAULT_LABELS on first load
+  labels: undefined, // Populated from DEFAULT_LABELS on first load
+  themeMode: 'system',
+  darkTheme: 'familiar-dark',
+  lightTheme: 'familiar-light'
 }

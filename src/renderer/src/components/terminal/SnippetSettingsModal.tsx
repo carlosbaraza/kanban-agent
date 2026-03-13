@@ -321,9 +321,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '4px',
     padding: '5px 8px',
     borderRadius: '5px',
-    border: '1px solid rgba(99,102,241,0.3)',
-    backgroundColor: 'rgba(99,102,241,0.08)',
-    color: '#818cf8',
+    border: '1px solid var(--accent)',
+    backgroundColor: 'var(--accent-subtle)',
+    color: 'var(--accent)',
     fontSize: '11px',
     cursor: 'pointer',
     minWidth: '70px',
@@ -366,7 +366,7 @@ const styles: Record<string, React.CSSProperties> = {
   removeButton: {
     background: 'none',
     border: 'none',
-    color: '#e74c3c',
+    color: 'var(--priority-urgent)',
     fontSize: '16px',
     cursor: 'pointer',
     padding: '0 4px',
@@ -389,9 +389,9 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     gap: '12px',
     padding: '8px 12px',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'var(--overlay-faint)',
     borderRadius: '5px',
-    border: '1px solid rgba(255,255,255,0.05)'
+    border: '1px solid var(--overlay-subtle)'
   },
   advancedCheckbox: {
     display: 'flex',
@@ -439,9 +439,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     borderRadius: '5px',
-    border: '1px solid rgba(99, 102, 241, 0.4)',
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    color: '#818cf8',
+    border: '1px solid var(--accent)',
+    backgroundColor: 'var(--accent-subtle)',
+    color: 'var(--accent)',
     cursor: 'pointer'
   }
 }

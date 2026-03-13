@@ -64,10 +64,10 @@ describe('PRIORITY_COLORS', () => {
     }
   })
 
-  it('returns hex color strings', () => {
+  it('returns CSS variable strings', () => {
     const priorities: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
     for (const p of priorities) {
-      expect(PRIORITY_COLORS[p]).toMatch(/^#[0-9a-fA-F]{6}$/)
+      expect(PRIORITY_COLORS[p]).toMatch(/^var\(--priority-.+\)$/)
     }
   })
 })

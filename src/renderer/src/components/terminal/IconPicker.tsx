@@ -173,15 +173,15 @@ const pickerStyles: Record<string, React.CSSProperties> = {
     padding: '8px',
     borderRadius: '5px',
     border: '1px solid transparent',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'var(--overlay-faint)',
     color: 'var(--text-secondary)',
     cursor: 'pointer',
     transition: 'background-color 0.1s, border-color 0.1s'
   },
   iconButtonSelected: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    borderColor: 'rgba(99,102,241,0.3)',
-    color: '#818cf8'
+    backgroundColor: 'var(--accent-subtle)',
+    borderColor: 'color-mix(in srgb, var(--accent) 30%, transparent)',
+    color: 'var(--accent)'
   },
   noResults: {
     gridColumn: '1 / -1',

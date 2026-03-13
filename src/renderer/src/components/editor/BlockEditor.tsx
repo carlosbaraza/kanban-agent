@@ -3,6 +3,8 @@ import { useCreateBlockNote } from '@blocknote/react'
 import { BlockNoteView } from '@blocknote/mantine'
 import type { TaskPastedFile } from '@shared/types'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
+import { resolveThemeId, isDarkTheme } from '@renderer/lib/theme'
 import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
 import '@blocknote/core/fonts/inter.css'
 import '@blocknote/mantine/style.css'
@@ -200,11 +202,18 @@ export function BlockEditor({ taskId, initialContent, onChange, onPastedFileAdde
     }
   }, [])
 
+  const themeMode = useUIStore((s) => s.themeMode)
+  const darkTheme = useUIStore((s) => s.darkTheme)
+  const lightTheme = useUIStore((s) => s.lightTheme)
+  const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+  const resolvedId = resolveThemeId(themeMode, darkTheme, lightTheme, systemPrefersDark)
+  const editorTheme = isDarkTheme(resolvedId) ? 'dark' : 'light'
+
   return (
     <div ref={editorWrapperRef} className={styles.editorWrapper} data-testid="block-editor">
       <BlockNoteView
         editor={editor}
-        theme="dark"
+        theme={editorTheme}
         onChange={handleChange}
       />
     </div>

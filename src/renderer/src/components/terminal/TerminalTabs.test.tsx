@@ -114,7 +114,7 @@ describe('TerminalTabs', () => {
 
     // The active tab should have the active background color
     const tab2 = screen.getByText('Terminal 2').closest('button')!
-    expect(tab2.style.backgroundColor).toBe('rgb(26, 26, 39)')
+    expect(tab2.style.backgroundColor).toBe('var(--bg-surface)')
 
     // The inactive tab should have transparent background
     const tab1 = screen.getByText('Terminal 1').closest('button')!

@@ -24,6 +24,11 @@ interface UIState {
   // Settings page
   settingsOpen: boolean
 
+  // Theme
+  themeMode: 'system' | 'light' | 'dark'
+  darkTheme: string
+  lightTheme: string
+
   // Create task modal (used when creating from task detail view)
   createTaskModalOpen: boolean
   createTaskForkFrom: string | null // parent task ID when forking
@@ -56,6 +61,10 @@ interface UIState {
   toggleCommandPalette: () => void
   openSettings: () => void
   closeSettings: () => void
+  setThemeMode: (mode: 'system' | 'light' | 'dark') => void
+  setDarkTheme: (themeId: string) => void
+  setLightTheme: (themeId: string) => void
+  cycleThemeMode: () => void
   openCreateTaskModal: () => void
   openCreateTaskModalForFork: (taskId: string) => void
   closeCreateTaskModal: () => void
@@ -101,6 +110,11 @@ export const useUIStore = create<UIState>((set) => ({
 
   // Settings page
   settingsOpen: false,
+
+  // Theme
+  themeMode: 'system',
+  darkTheme: 'familiar-dark',
+  lightTheme: 'familiar-light',
 
   // Create task modal
   createTaskModalOpen: false,
@@ -161,6 +175,16 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeSettings: () =>
     set({ settingsOpen: false }),
+
+  setThemeMode: (mode) => set({ themeMode: mode }),
+  setDarkTheme: (themeId) => set({ darkTheme: themeId }),
+  setLightTheme: (themeId) => set({ lightTheme: themeId }),
+  cycleThemeMode: () =>
+    set((state) => {
+      const next =
+        state.themeMode === 'system' ? 'light' : state.themeMode === 'light' ? 'dark' : 'system'
+      return { themeMode: next }
+    }),
 
   openCreateTaskModal: () =>
     set({ createTaskModalOpen: true, createTaskForkFrom: null }),

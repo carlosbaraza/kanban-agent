@@ -10,6 +10,9 @@ describe('useUIStore', () => {
       activeTaskId: null,
       taskDetailOpen: false,
       commandPaletteOpen: false,
+      themeMode: 'system',
+      darkTheme: 'familiar-dark',
+      lightTheme: 'familiar-light',
       filters: {
         search: '',
         priority: [],
@@ -152,6 +155,41 @@ describe('useUIStore', () => {
       useUIStore.getState().setPendingDetailFocus('terminal')
       useUIStore.getState().setPendingDetailFocus(null)
       expect(useUIStore.getState().pendingDetailFocus).toBeNull()
+    })
+  })
+
+  describe('theme state', () => {
+    it('has correct theme defaults', () => {
+      const state = useUIStore.getState()
+      expect(state.themeMode).toBe('system')
+      expect(state.darkTheme).toBe('familiar-dark')
+      expect(state.lightTheme).toBe('familiar-light')
+    })
+
+    it('setThemeMode updates mode', () => {
+      useUIStore.getState().setThemeMode('dark')
+      expect(useUIStore.getState().themeMode).toBe('dark')
+    })
+
+    it('setDarkTheme updates dark theme', () => {
+      useUIStore.getState().setDarkTheme('dracula')
+      expect(useUIStore.getState().darkTheme).toBe('dracula')
+    })
+
+    it('setLightTheme updates light theme', () => {
+      useUIStore.getState().setLightTheme('solarized-light')
+      expect(useUIStore.getState().lightTheme).toBe('solarized-light')
+    })
+
+    it('cycleThemeMode cycles system → light → dark → system', () => {
+      const { cycleThemeMode } = useUIStore.getState()
+      expect(useUIStore.getState().themeMode).toBe('system')
+      cycleThemeMode()
+      expect(useUIStore.getState().themeMode).toBe('light')
+      cycleThemeMode()
+      expect(useUIStore.getState().themeMode).toBe('dark')
+      cycleThemeMode()
+      expect(useUIStore.getState().themeMode).toBe('system')
     })
   })
 

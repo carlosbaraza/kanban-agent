@@ -170,10 +170,10 @@ const menuStyles: Record<string, React.CSSProperties> = {
     position: 'fixed',
     minWidth: 180,
     maxWidth: 260,
-    backgroundColor: '#1a1a27',
-    border: '1px solid #2a2a3c',
+    backgroundColor: 'var(--bg-surface)',
+    border: '1px solid var(--border)',
     borderRadius: 8,
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+    boxShadow: 'var(--shadow-lg), 0 0 0 1px var(--overlay-faint)',
     padding: '4px 0',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     animation: 'cmdkFadeIn 100ms ease'
@@ -185,7 +185,7 @@ const menuStyles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '6px 12px',
     fontSize: 13,
-    color: '#f0f0f4',
+    color: 'var(--text-primary)',
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
@@ -196,7 +196,7 @@ const menuStyles: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit'
   },
   itemDanger: {
-    color: '#e74c3c'
+    color: 'var(--priority-urgent)'
   },
   icon: {
     display: 'flex',
@@ -206,7 +206,7 @@ const menuStyles: Record<string, React.CSSProperties> = {
     height: 16,
     flexShrink: 0,
     fontSize: 14,
-    color: '#8e8ea0'
+    color: 'var(--text-secondary)'
   },
   label: {
     flex: 1,
@@ -216,13 +216,13 @@ const menuStyles: Record<string, React.CSSProperties> = {
   },
   shortcut: {
     fontSize: 11,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     fontFamily: "'SF Mono', 'Fira Code', monospace",
     flexShrink: 0
   },
   divider: {
     height: 1,
-    backgroundColor: '#2a2a3c',
+    backgroundColor: 'var(--border)',
     margin: '4px 0'
   }
 }
@@ -236,7 +236,7 @@ if (typeof document !== 'undefined') {
     style.textContent = `
       [data-context-item]:hover,
       [data-context-item]:focus {
-        background-color: rgba(94, 106, 210, 0.15) !important;
+        background-color: var(--accent-subtle) !important;
         outline: none;
       }
     `

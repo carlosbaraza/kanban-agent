@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
+// Mock matchMedia for theme resolution
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: query === '(prefers-color-scheme: dark)',
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn()
+  }))
+})
+
 // Mock BlockNote modules before importing the component
 vi.mock('@blocknote/react', () => {
   const mockEditor = {

@@ -58,8 +58,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1px',
     padding: '0 4px',
     height: '32px',
-    backgroundColor: '#0d0d12',
-    borderBottom: '1px solid #2a2a3c',
+    backgroundColor: 'var(--bg-deepest)',
+    borderBottom: '1px solid var(--border)',
     flexShrink: 0
   },
   tab: {
@@ -70,7 +70,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: '28px',
     fontSize: '12px',
     fontFamily: "'Inter', sans-serif",
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     backgroundColor: 'transparent',
     border: 'none',
     borderRadius: '4px 4px 0 0',
@@ -79,8 +79,8 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap'
   },
   tabActive: {
-    color: '#f0f0f4',
-    backgroundColor: '#1a1a27'
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-surface)'
   },
   tabTitle: {
     overflow: 'hidden',
@@ -96,7 +96,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '14px',
     lineHeight: 1,
     borderRadius: '3px',
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     cursor: 'pointer'
   },
   addButton: {
@@ -106,7 +106,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: '24px',
     height: '24px',
     fontSize: '16px',
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     backgroundColor: 'transparent',
     border: 'none',
     borderRadius: '4px',

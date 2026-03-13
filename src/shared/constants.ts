@@ -25,11 +25,11 @@ export const PRIORITY_ORDER: Record<Priority, number> = {
 }
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  urgent: '#f44336',
-  high: '#ff9800',
-  medium: '#ffeb3b',
-  low: '#4caf50',
-  none: '#6b7280'
+  urgent: 'var(--priority-urgent)',
+  high: 'var(--priority-high)',
+  medium: 'var(--priority-medium)',
+  low: 'var(--priority-low)',
+  none: 'var(--priority-none)'
 }
 
 export const AGENT_STATUS_LABELS: Record<AgentStatus, string> = {

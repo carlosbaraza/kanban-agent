@@ -97,7 +97,7 @@ describe('IconPicker', () => {
     render(<IconPicker {...defaultProps} selectedIcon="rocket" />)
 
     const rocketButton = screen.getByTitle('rocket')
-    expect(rocketButton.style.backgroundColor).toBe('rgba(99, 102, 241, 0.15)')
+    expect(rocketButton.style.backgroundColor).toBe('var(--accent-subtle)')
   })
 
   it('calls onClose when Escape key is pressed', () => {

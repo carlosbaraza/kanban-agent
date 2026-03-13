@@ -6,7 +6,7 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({
   size = 24,
-  color = 'var(--accent, #5e6ad2)',
+  color = 'var(--accent)',
   label
 }: LoadingSpinnerProps): React.JSX.Element {
   return (
@@ -47,7 +47,7 @@ const spinnerStyles: Record<string, React.CSSProperties> = {
   },
   label: {
     fontSize: 13,
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   }
 }

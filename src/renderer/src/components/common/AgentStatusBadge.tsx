@@ -9,10 +9,10 @@ const STATUS_CONFIG: Record<
   AgentStatus,
   { color: string; label: string; glow?: boolean; pulse?: boolean }
 > = {
-  idle: { color: '#5c5c6e', label: 'Idle' },
-  running: { color: '#5e6ad2', label: 'Running', pulse: true },
-  done: { color: '#27ae60', label: 'Done' },
-  error: { color: '#e74c3c', label: 'Error', glow: true }
+  idle: { color: 'var(--agent-idle)', label: 'Idle' },
+  running: { color: 'var(--agent-running)', label: 'Running', pulse: true },
+  done: { color: 'var(--agent-done)', label: 'Done' },
+  error: { color: 'var(--agent-error)', label: 'Error', glow: true }
 }
 
 export function AgentStatusBadge({
@@ -59,7 +59,7 @@ const badgeStyles: Record<string, React.CSSProperties> = {
   },
   label: {
     fontSize: 11,
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     fontWeight: 500,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   }

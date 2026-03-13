@@ -27,19 +27,19 @@
 
 /* Agent running — purple with pulse */
 .dotRunning {
-  background-color: #5e6ad2;
+  background-color: var(--agent-running);
   animation: agentPulse 2s ease-in-out infinite;
 }
 
 /* Agent error — red with glow */
 .dotError {
-  background-color: #e74c3c;
+  background-color: var(--agent-error);
   box-shadow: 0 0 6px 1px rgba(231, 76, 60, 0.5);
 }
 
 /* Notification unread — orange */
 .dotNotification {
-  background-color: #e89b3e;
+  background-color: var(--status-in-review);
   animation: notifGlow 2s ease-in-out infinite;
 }
 
