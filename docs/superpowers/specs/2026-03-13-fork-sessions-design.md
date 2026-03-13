@@ -30,15 +30,22 @@ Modify `resolveClaudeSessionCommand()` in `src/main/services/claude-session.ts`:
 
 When resolving the command for a task:
 1. Check if the task has a `forkedFrom` field
-2. Check if a session file already exists for the current task's UUID
+2. Check if a session file already exists for the current task's own UUID
 3. If `forkedFrom` is set AND no session file exists for this task's UUID yet:
    - Compute the parent's UUID via `taskIdToUuid(forkedFrom)`
-   - Use `--resume "<parent-uuid>"` instead of `--session-id "<new-uuid>"`
-4. Otherwise, use the existing logic (resume own session if it exists, or start fresh)
+   - Check if parent's session file exists
+   - If parent session exists: **copy** the parent's session `.jsonl` file to the child's UUID path, then use `--resume "<child-uuid>"`
+   - If parent session does not exist: fall back to `--session-id "<child-uuid>"` (start fresh), log a warning
+4. If the task's own session file exists: use `--resume "<child-uuid>"` (normal resume)
+5. Otherwise: use `--session-id "<child-uuid>"` (start fresh)
 
-This means the forked task's first Claude Code launch resumes the parent's conversation. After that, Claude Code continues under the parent's UUID — subsequent `--resume` calls will find the session file and resume normally.
+**Key insight:** We copy the session file rather than using `--resume <parent-uuid>` directly. This ensures:
+- The forked task gets its own independent session file from the first launch
+- No shared state or race conditions between parent and child sessions
+- Both sessions diverge cleanly from the fork point
+- The `resolveClaudeSessionCommand` logic is self-correcting — after the first launch, the child's session file exists, and subsequent launches use normal resume
 
-For fork chains: forking C from B uses `--resume <B's-uuid>`. B's session already includes context from A, so C inherits the full chain.
+For fork chains: forking C from B copies B's session file. B's session already includes context inherited from A, so C gets the full chain history.
 
 ### Required Changes
 
@@ -53,6 +60,8 @@ export function resolveClaudeSessionCommand(
 ): string
 ```
 
+The function now also performs a file copy (parent session → child session) as a side effect when forking. This is acceptable because it only happens once (when the child's session file doesn't exist yet).
+
 The caller in `electron-pty.ts` needs to read the task's `forkedFrom` field and pass it through. This requires `electron-pty.ts` to have access to the data service or receive the `forkedFrom` value from the renderer via the `pty:create` IPC call.
 
 **Approach:** Add an optional `forkedFrom` parameter to the `pty:create` IPC call. The renderer's `TerminalPanel` reads it from the task store and passes it when creating the PTY session.
@@ -65,14 +74,20 @@ The caller in `electron-pty.ts` needs to read the task's `forkedFrom` field and 
 
 Add a fork button in the `topBarActions` area, next to the "Open in Finder" button. Uses the `GitFork` icon from Lucide.
 
-**Behavior:** Clicking opens `CreateTaskModal` in fork mode, passing the current task ID.
+**Behavior:** Clicking sets fork state in the UI store and opens `CreateTaskModal`.
 
 ### 2. CreateTaskModal — Fork Mode
 
 **Location:** `src/renderer/src/components/common/CreateTaskModal.tsx`
 
-The modal accepts an optional `forkFrom?: string` prop (task ID). When set:
+The modal reads fork state from the UI store (not props — consistent with existing pattern where `CreateTaskModal` reads `createTaskModalOpen` from `useUIStore`).
 
+**New UI store fields** in `src/renderer/src/stores/ui-store.ts`:
+- `createTaskForkFrom: string | null` — the parent task ID when forking, `null` otherwise
+- `openCreateTaskModalForFork(taskId: string)` — sets `createTaskForkFrom` and opens the modal
+- Clear `createTaskForkFrom` when the modal closes
+
+When `createTaskForkFrom` is set:
 - A visual badge is displayed above the title input: "Forking from tsk_abc123" (styled as a subtle chip/pill)
 - The title input starts empty — the user types whatever they want
 - No labels are copied from the parent
@@ -101,11 +116,12 @@ After the attachments/pasted files section, show a "Forks" section if `task.fork
 
 **Location:** `src/renderer/src/stores/task-store.ts`
 
-Modify `addTask()` to:
-1. Accept optional `forkedFrom` in the task creation payload
-2. If `forkedFrom` is set, update the parent task's `forks` array via `updateTask()`
+Add a dedicated `forkTask(parentId: string, title: string, documentContent?: string)` method that encapsulates:
+1. Create the child task with `forkedFrom` set to `parentId`
+2. Update the parent task's `forks` array to include the child's ID
+3. Log activity on both tasks: "Forked to tsk_xxx" on parent, "Forked from tsk_xxx" on child
 
-No new store methods needed — existing `addTask()` and `updateTask()` cover the flow.
+This is cleaner than overloading `addTask` with fork logic and easier to test.
 
 ## IPC Changes
 
@@ -122,10 +138,12 @@ ptyCreate(taskId: string, paneId: string, cwd: string, forkedFrom?: string): Pro
 ```
 
 Update in:
+- `src/shared/platform/pty.ts` — update `IPtyManager` interface
 - `src/preload/index.ts` — add parameter to `ptyCreate`
 - `src/renderer/src/env.d.ts` — update type definition
 - `src/main/ipc/pty-handlers.ts` — pass `forkedFrom` to PTY create
 - `src/main/platform/electron-pty.ts` — pass `forkedFrom` to `resolveClaudeSessionCommand()`
+- `src/renderer/src/components/terminal/TerminalPanel.tsx` — read `forkedFrom` from task store, pass to `ptyCreate`
 
 No new IPC handlers needed.
 
@@ -134,8 +152,10 @@ No new IPC handlers needed.
 ### `familiar add` — Optional `--fork-from` flag
 
 Add `--fork-from <taskId>` option to the `add` command in `src/cli/commands/add.ts`. When set:
+- Validates the parent task exists (fail gracefully if not)
 - Creates the new task with `forkedFrom` set
 - Updates the parent task's `forks` array
+- Logs activity on both tasks
 
 This enables agents to programmatically fork tasks.
 
@@ -165,20 +185,23 @@ Parent's `task.json`:
 
 ## Edge Cases
 
-1. **Deleting a forked task**: Remove the task ID from the parent's `forks` array. The parent's `forkedFrom` reference in other forks is unaffected.
+1. **Deleting a forked task**: Remove the task ID from the parent's `forks` array. Update both `deleteTask` and `deleteTasks` in the task store, and the CLI `delete` command.
 
-2. **Deleting a parent task**: Child tasks retain their `forkedFrom` field (now pointing to a deleted task). The UI should handle this gracefully — show "Forked from tsk_abc123 (deleted)" or hide the link.
+2. **Deleting a parent task**: Child tasks retain their `forkedFrom` field (now pointing to a deleted task). The UI handles this gracefully — show "Forked from tsk_abc123 (deleted)" or hide the link.
 
 3. **Archiving**: Forking an archived task is allowed. The fork starts as `todo` regardless.
 
-4. **Session file missing**: If the parent's Claude Code session file doesn't exist when the fork first launches, fall back to `--session-id` (start fresh). Log a warning in the activity.
+4. **Session file missing**: If the parent's Claude Code session file doesn't exist when the fork first launches, fall back to `--session-id` (start fresh). This is handled in the session resolution logic.
+
+5. **Concurrent parent session**: The session file copy is a snapshot at fork time. Even if the parent is actively running, the copy captures the state at that moment. Both sessions diverge independently after.
 
 ## Testing
 
-- Unit tests for `resolveClaudeSessionCommand` with `forkedFrom` parameter
-- Unit tests for task store `addTask` with fork flow (creates task + updates parent)
-- Component tests for `CreateTaskModal` in fork mode (badge display, `forkedFrom` propagation)
+- Unit tests for `resolveClaudeSessionCommand` with `forkedFrom` parameter (including session file copy behavior)
+- Unit tests for `forkTask` store method (creates child, updates parent, logs activity on both)
+- Unit tests for `deleteTask` cleanup of parent's `forks` array
+- Component tests for `CreateTaskModal` in fork mode (badge display, UI store integration)
 - Component tests for `TaskCard` fork icon rendering
-- Component tests for fork links in `TaskDetailContent`
+- Component tests for fork links in `TaskDetailContent` (parent link, forks list)
 - Integration tests for the full fork flow (create fork → verify parent updated → verify session command)
-- CLI tests for `familiar add --fork-from`
+- CLI tests for `familiar add --fork-from` (including validation of parent existence)
