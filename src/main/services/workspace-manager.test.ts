@@ -173,6 +173,30 @@ describe('WorkspaceManager', () => {
       expect(wm.getOpenProjectPaths()).toContain('/tmp/b')
     })
 
+    it('setActiveWorkspaceId sets the active workspace ID', () => {
+      const wm = new WorkspaceManager()
+      wm.openSingleProject('/tmp/a')
+      expect(wm.getActiveWorkspaceId()).toBeNull()
+
+      wm.setActiveWorkspaceId('ws_test')
+      expect(wm.getActiveWorkspaceId()).toBe('ws_test')
+    })
+
+    it('addProjectToWorkspace updates workspace config when activeWorkspaceId is set', () => {
+      const wm = new WorkspaceManager()
+      wm.openSingleProject('/tmp/a')
+
+      // Create a workspace and set it as active
+      const ws = wm.createWorkspace('Test', ['/tmp/a'])
+      wm.setActiveWorkspaceId(ws.id)
+
+      // Now adding a project should update the workspace config
+      wm.addProjectToWorkspace('/tmp/b')
+      const config = wm.loadWorkspaceConfig()
+      const workspace = config.workspaces.find((w) => w.id === ws.id)
+      expect(workspace?.projectPaths).toContain('/tmp/b')
+    })
+
     it('closeAll clears all state', () => {
       const wm = new WorkspaceManager()
       wm.openSingleProject('/tmp/a')

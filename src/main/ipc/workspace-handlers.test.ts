@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ipcMain } from 'electron'
 import { registerWorkspaceHandlers } from './workspace-handlers'
 import type { WorkspaceManager } from '../services/workspace-manager'
+import type { DataService } from '../services/data-service'
+import type { ElectronPtyManager } from '../platform/electron-pty'
 
 // Mock ipcMain
 vi.mock('electron', () => ({
@@ -12,6 +14,8 @@ vi.mock('electron', () => ({
 
 describe('workspace-handlers', () => {
   let mockManager: Partial<WorkspaceManager>
+  let mockDataService: Partial<DataService>
+  let mockPtyManager: Partial<ElectronPtyManager>
   let handlers: Map<string, (...args: any[]) => any>
 
   beforeEach(() => {
@@ -23,6 +27,8 @@ describe('workspace-handlers', () => {
       handlers.set(channel, handler)
       return undefined as any
     })
+
+    const mockDs = { getProjectRoot: vi.fn().mockReturnValue('/tmp/target'), setProjectRoot: vi.fn() }
 
     mockManager = {
       listWorkspaces: vi.fn().mockReturnValue([]),
@@ -36,10 +42,24 @@ describe('workspace-handlers', () => {
       loadWorkspaceConfig: vi.fn().mockReturnValue({ workspaces: [], lastWorkspaceId: null }),
       getOpenProjectPaths: vi.fn().mockReturnValue([]),
       getActiveProjectPath: vi.fn().mockReturnValue(null),
-      setActiveProjectPath: vi.fn()
+      setActiveProjectPath: vi.fn(),
+      setActiveWorkspaceId: vi.fn(),
+      getDataService: vi.fn().mockReturnValue(mockDs)
     }
 
-    registerWorkspaceHandlers(mockManager as WorkspaceManager)
+    mockDataService = {
+      setProjectRoot: vi.fn()
+    }
+
+    mockPtyManager = {
+      setDataService: vi.fn()
+    }
+
+    registerWorkspaceHandlers(
+      mockManager as WorkspaceManager,
+      mockDataService as DataService,
+      mockPtyManager as ElectronPtyManager
+    )
   })
 
   it('registers all workspace IPC channels', () => {
@@ -55,7 +75,8 @@ describe('workspace-handlers', () => {
       'workspace:get-config',
       'workspace:get-open-projects',
       'workspace:get-active-project',
-      'workspace:set-active-project'
+      'workspace:set-active-project',
+      'workspace:set-active-workspace-id'
     ]
 
     for (const channel of expectedChannels) {
@@ -111,9 +132,18 @@ describe('workspace-handlers', () => {
     expect(mockManager.removeProjectFromWorkspace).toHaveBeenCalledWith('/tmp/old-project')
   })
 
-  it('workspace:set-active-project passes path', async () => {
+  it('workspace:set-active-project passes path and updates legacy refs', async () => {
     const handler = handlers.get('workspace:set-active-project')!
     await handler({}, '/tmp/target')
     expect(mockManager.setActiveProjectPath).toHaveBeenCalledWith('/tmp/target')
+    expect(mockManager.getDataService).toHaveBeenCalledWith('/tmp/target')
+    expect(mockDataService.setProjectRoot).toHaveBeenCalledWith('/tmp/target')
+    expect(mockPtyManager.setDataService).toHaveBeenCalled()
+  })
+
+  it('workspace:set-active-workspace-id passes id', async () => {
+    const handler = handlers.get('workspace:set-active-workspace-id')!
+    await handler({}, 'ws_123')
+    expect(mockManager.setActiveWorkspaceId).toHaveBeenCalledWith('ws_123')
   })
 })

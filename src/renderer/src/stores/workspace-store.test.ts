@@ -16,6 +16,7 @@ const mockApi = {
   workspaceGetOpenProjects: vi.fn(),
   workspaceGetActiveProject: vi.fn(),
   workspaceSetActiveProject: vi.fn(),
+  workspaceSetActiveWorkspaceId: vi.fn(),
   openDirectory: vi.fn()
 }
 
@@ -150,11 +151,19 @@ describe('workspace-store', () => {
     })
 
     it('adds project and reloads when path selected', async () => {
+      const implicitWs: Workspace = {
+        id: 'ws_implicit',
+        name: 'My Workspace',
+        projectPaths: ['/tmp/a', '/tmp/new'],
+        lastOpenedAt: '2026-01-01T00:00:00Z',
+        createdAt: '2026-01-01T00:00:00Z'
+      }
       mockApi.openDirectory.mockResolvedValue('/tmp/new')
       mockApi.workspaceAddProject.mockResolvedValue(undefined)
       mockApi.workspaceGetOpenProjects.mockResolvedValue(['/tmp/a', '/tmp/new'])
       mockApi.workspaceGetActiveProject.mockResolvedValue('/tmp/a')
-      mockApi.workspaceGetConfig.mockResolvedValue({ workspaces: [], lastWorkspaceId: null })
+      mockApi.workspaceCreate.mockResolvedValue(implicitWs)
+      mockApi.workspaceSetActiveWorkspaceId.mockResolvedValue(undefined)
 
       // Set initial state with one project
       useWorkspaceStore.setState({
@@ -162,9 +171,75 @@ describe('workspace-store', () => {
         activeProjectPath: '/tmp/a'
       })
 
-      const result = await useWorkspaceStore.getState().addProject()
+      // addProject calls promptWorkspaceName when no workspace exists.
+      // Resolve the prompt asynchronously to unblock the flow.
+      const addPromise = useWorkspaceStore.getState().addProject()
+      // Wait a tick for the prompt to be set up
+      await new Promise((r) => setTimeout(r, 0))
+      useWorkspaceStore.getState().resolveWorkspaceNamePrompt('My Workspace')
+
+      const result = await addPromise
       expect(result).toBe('/tmp/new')
       expect(mockApi.workspaceAddProject).toHaveBeenCalledWith('/tmp/new')
+      // Should create a workspace with the user-provided name and sync backend activeWorkspaceId
+      expect(mockApi.workspaceCreate).toHaveBeenCalledWith('My Workspace', ['/tmp/a', '/tmp/new'])
+      expect(mockApi.workspaceSetActiveWorkspaceId).toHaveBeenCalledWith('ws_implicit')
+    })
+
+    it('updates existing workspace when adding a third project', async () => {
+      const existingWs: Workspace = {
+        id: 'ws_existing',
+        name: '',
+        projectPaths: ['/tmp/a', '/tmp/b'],
+        lastOpenedAt: '2026-01-01T00:00:00Z',
+        createdAt: '2026-01-01T00:00:00Z'
+      }
+      const updatedWs: Workspace = {
+        ...existingWs,
+        projectPaths: ['/tmp/a', '/tmp/b', '/tmp/c']
+      }
+      mockApi.openDirectory.mockResolvedValue('/tmp/c')
+      mockApi.workspaceAddProject.mockResolvedValue(undefined)
+      mockApi.workspaceUpdate.mockResolvedValue(updatedWs)
+      mockApi.workspaceGetOpenProjects.mockResolvedValue(['/tmp/a', '/tmp/b', '/tmp/c'])
+      mockApi.workspaceGetActiveProject.mockResolvedValue('/tmp/a')
+
+      // Set initial state with two projects and an active workspace
+      useWorkspaceStore.setState({
+        openProjects: [{ path: '/tmp/a', name: 'a' }, { path: '/tmp/b', name: 'b' }],
+        activeProjectPath: '/tmp/a',
+        activeWorkspace: existingWs
+      })
+
+      const result = await useWorkspaceStore.getState().addProject()
+      expect(result).toBe('/tmp/c')
+      // Should update the existing workspace config with the new path
+      expect(mockApi.workspaceUpdate).toHaveBeenCalledWith('ws_existing', {
+        projectPaths: ['/tmp/a', '/tmp/b', '/tmp/c']
+      })
+      // activeWorkspace should be updated
+      const { activeWorkspace } = useWorkspaceStore.getState()
+      expect(activeWorkspace?.projectPaths).toEqual(['/tmp/a', '/tmp/b', '/tmp/c'])
+    })
+
+    it('returns null when user cancels workspace name prompt', async () => {
+      // Set initial state with one project and no workspace
+      useWorkspaceStore.setState({
+        openProjects: [{ path: '/tmp/a', name: 'a' }],
+        activeProjectPath: '/tmp/a'
+      })
+
+      const addPromise = useWorkspaceStore.getState().addProject()
+      // Wait a tick for the prompt to be set up
+      await new Promise((r) => setTimeout(r, 0))
+      expect(useWorkspaceStore.getState().showWorkspaceNamePrompt).toBe(true)
+
+      // Cancel the prompt
+      useWorkspaceStore.getState().resolveWorkspaceNamePrompt(null)
+
+      const result = await addPromise
+      expect(result).toBeNull()
+      expect(mockApi.openDirectory).not.toHaveBeenCalled()
     })
   })
 

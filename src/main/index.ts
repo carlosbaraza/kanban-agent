@@ -132,7 +132,7 @@ function createWindow(): void {
   )
   registerCliHandlers()
   registerUpdateHandlers(mainWindow, updateService)
-  registerWorkspaceHandlers(workspaceManager)
+  registerWorkspaceHandlers(workspaceManager, dataService, ptyManager)
 
   // Build and set the application menu
   const appMenu = buildAppMenu(mainWindow, updateService)

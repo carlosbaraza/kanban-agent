@@ -42,9 +42,10 @@ export function ProjectSidebar(): React.JSX.Element | null {
       saveProjectTaskState(activeProjectPath)
     }
     await switchProject(path)
-    // Reload project state for the newly active project
-    // The main process has already switched the active project
-    await window.api.setProjectRoot(path)
+    // switchProject calls workspaceSetActiveProject which updates both the
+    // workspace manager's active project and legacy dataService/ptyManager refs.
+    // Do NOT call setProjectRoot here — it triggers openSingleProject which
+    // destroys multi-project state by calling closeAll().
     await loadProjectState()
     // Restore task detail state for the target project
     restoreProjectTaskState(path)

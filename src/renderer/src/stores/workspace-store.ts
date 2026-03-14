@@ -23,6 +23,10 @@ interface WorkspaceState {
   // Workspace picker
   showWorkspacePicker: boolean
 
+  // Workspace name prompt (shown when adding a folder to a single-project window)
+  showWorkspaceNamePrompt: boolean
+  workspaceNamePromptResolve: ((name: string | null) => void) | null
+
   // Actions
   loadWorkspaces: () => Promise<void>
   loadOpenProjects: () => Promise<void>
@@ -35,6 +39,8 @@ interface WorkspaceState {
   toggleSidebarVisible: () => void
   setSidebarExpanded: (expanded: boolean) => void
   setShowWorkspacePicker: (show: boolean) => void
+  promptWorkspaceName: () => Promise<string | null>
+  resolveWorkspaceNamePrompt: (name: string | null) => void
 
   updateProjectTaskCount: (projectPath: string, count: number) => void
 
@@ -56,6 +62,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   sidebarExpanded: false,
   sidebarVisible: false,
   showWorkspacePicker: false,
+  showWorkspaceNamePrompt: false,
+  workspaceNamePromptResolve: null,
 
   // Actions
   loadWorkspaces: async (): Promise<void> => {
@@ -101,22 +109,41 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   addProject: async (): Promise<string | null> => {
+    const { openProjects, activeWorkspace, promptWorkspaceName } = get()
+
+    // When adding a folder to a single-project window (no workspace yet),
+    // prompt for a workspace name first so the user understands what's happening.
+    let workspaceName: string | null = null
+    if (!activeWorkspace && openProjects.length >= 1) {
+      workspaceName = await promptWorkspaceName()
+      if (workspaceName === null) return null // User cancelled
+    }
+
     const selectedPath = await window.api.openDirectory()
     if (!selectedPath) return null
 
     await window.api.workspaceAddProject(selectedPath)
 
-    // If we now have 2+ projects and no workspace, create an implicit one
-    const { openProjects, activeWorkspace } = get()
-    if (openProjects.length >= 1 && !activeWorkspace) {
-      // Check if there's no saved workspace yet
-      const config = await window.api.workspaceGetConfig()
-      if (config.workspaces.length === 0) {
-        // Create implicit workspace with all open projects
-        const allPaths = [...openProjects.map((p) => p.path), selectedPath]
-        const ws = await window.api.workspaceCreate('', allPaths)
+    // Re-read state after async operations
+    const currentState = get()
+    if (currentState.activeWorkspace) {
+      // Workspace already exists — add the new path to it if not already present
+      if (!currentState.activeWorkspace.projectPaths.includes(selectedPath)) {
+        const updatedPaths = [...currentState.activeWorkspace.projectPaths, selectedPath]
+        const ws = await window.api.workspaceUpdate(currentState.activeWorkspace.id, {
+          projectPaths: updatedPaths
+        })
         set({ activeWorkspace: ws })
       }
+    } else if (currentState.openProjects.length >= 1) {
+      // No workspace yet — create one with the given name
+      const allPaths = [...currentState.openProjects.map((p) => p.path), selectedPath]
+      const ws = await window.api.workspaceCreate(workspaceName || '', allPaths)
+      // Sync activeWorkspaceId on the backend so future addProjectToWorkspace
+      // calls update the workspace config. Don't use workspaceOpen which
+      // would closeAll() and reset file watchers.
+      await window.api.workspaceSetActiveWorkspaceId(ws.id)
+      set({ activeWorkspace: ws })
     }
 
     const { loadOpenProjects } = get()
@@ -172,5 +199,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     await window.api.workspaceDelete(id)
     const { loadWorkspaces } = get()
     await loadWorkspaces()
+  },
+
+  promptWorkspaceName: (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      set({
+        showWorkspaceNamePrompt: true,
+        workspaceNamePromptResolve: resolve
+      })
+    })
+  },
+
+  resolveWorkspaceNamePrompt: (name: string | null): void => {
+    const { workspaceNamePromptResolve } = get()
+    if (workspaceNamePromptResolve) {
+      workspaceNamePromptResolve(name)
+    }
+    set({
+      showWorkspaceNamePrompt: false,
+      workspaceNamePromptResolve: null
+    })
   }
 }))

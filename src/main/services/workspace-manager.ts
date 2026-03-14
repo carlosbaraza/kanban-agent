@@ -191,6 +191,10 @@ export class WorkspaceManager {
     return this.activeWorkspaceId
   }
 
+  setActiveWorkspaceId(workspaceId: string): void {
+    this.activeWorkspaceId = workspaceId
+  }
+
   getOpenProjectPaths(): string[] {
     return Array.from(this.dataServices.keys())
   }

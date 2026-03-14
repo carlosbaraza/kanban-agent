@@ -1,8 +1,14 @@
 import { ipcMain } from 'electron'
 import { WorkspaceManager } from '../services/workspace-manager'
+import { DataService } from '../services/data-service'
+import { ElectronPtyManager } from '../platform/electron-pty'
 import type { Workspace } from '../../shared/types'
 
-export function registerWorkspaceHandlers(workspaceManager: WorkspaceManager): void {
+export function registerWorkspaceHandlers(
+  workspaceManager: WorkspaceManager,
+  dataService: DataService,
+  ptyManager: ElectronPtyManager
+): void {
   ipcMain.handle('workspace:list', async (): Promise<Workspace[]> => {
     return workspaceManager.listWorkspaces()
   })
@@ -55,5 +61,14 @@ export function registerWorkspaceHandlers(workspaceManager: WorkspaceManager): v
 
   ipcMain.handle('workspace:set-active-project', async (_, projectPath: string): Promise<void> => {
     workspaceManager.setActiveProjectPath(projectPath)
+    // Update legacy references so handlers that use the captured dataService
+    // and ptyManager continue to work with the correct project
+    const ds = workspaceManager.getDataService(projectPath)
+    dataService.setProjectRoot(ds.getProjectRoot())
+    ptyManager.setDataService(ds)
+  })
+
+  ipcMain.handle('workspace:set-active-workspace-id', async (_, workspaceId: string): Promise<void> => {
+    workspaceManager.setActiveWorkspaceId(workspaceId)
   })
 }
