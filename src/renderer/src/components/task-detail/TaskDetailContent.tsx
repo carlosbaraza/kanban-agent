@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Task, TaskPastedFile } from '@shared/types'
+import { onFileChange } from '@renderer/lib/file-change-hub'
 import { SplitPanel } from './SplitPanel'
-import { ActivityTimeline } from './ActivityTimeline'
+import { ActivityPreview } from './ActivityPreview'
 import { TaskDetailHeader } from './TaskDetailHeader'
 import { TerminalPanel } from '@renderer/components/terminal/TerminalPanel'
 import { BlockEditor } from '@renderer/components/editor'
@@ -74,7 +75,7 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
 
   // Re-read document when external file changes are detected
   useEffect(() => {
-    const unsub = window.api.watchProjectDir(async () => {
+    return onFileChange(async () => {
       try {
         const content = await window.api.readTaskDocument(taskId)
         setDocumentContent(content || '')
@@ -82,7 +83,6 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
         // Ignore — task may have been deleted
       }
     })
-    return () => unsub()
   }, [taskId])
 
   return (
@@ -93,6 +93,7 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
             <div className={styles.stickyHeader}>
               <TaskDetailHeader task={task} onUpdate={onUpdate} onClose={onClose} />
             </div>
+            <ActivityPreview taskId={taskId} />
             <div className={styles.scrollArea}>
               <div className={styles.editorSection}>
                 {documentLoaded ? (
@@ -173,9 +174,6 @@ export function TaskDetailContent({ taskId, task, onUpdate, onClose }: TaskDetai
                   </div>
                 </div>
               )}
-              <div className={styles.activitySection}>
-                <ActivityTimeline taskId={taskId} />
-              </div>
             </div>
           </div>
         }

@@ -19,9 +19,9 @@ vi.mock('@renderer/components/terminal/TerminalPanel', () => ({
   )
 }))
 
-vi.mock('./ActivityTimeline', () => ({
-  ActivityTimeline: ({ taskId }: any) => (
-    <div data-testid="activity-timeline">Activity for {taskId}</div>
+vi.mock('./ActivityPreview', () => ({
+  ActivityPreview: ({ taskId }: any) => (
+    <div data-testid="activity-preview">Activity for {taskId}</div>
   )
 }))
 
@@ -120,11 +120,11 @@ describe('TaskDetailContent', () => {
     expect(screen.getByText('Terminal for tsk_abc')).toBeInTheDocument()
   })
 
-  it('renders ActivityTimeline', async () => {
+  it('renders ActivityPreview', async () => {
     render(<TaskDetailContent taskId="tsk_abc" {...defaultProps} />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('activity-timeline')).toBeInTheDocument()
+      expect(screen.getByTestId('activity-preview')).toBeInTheDocument()
     })
     expect(screen.getByText('Activity for tsk_abc')).toBeInTheDocument()
   })
