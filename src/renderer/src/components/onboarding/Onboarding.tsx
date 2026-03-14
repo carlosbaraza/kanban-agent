@@ -134,14 +134,20 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
 
   // Inline terminal for doctor step
   const [doctorRunning, setDoctorRunning] = useState(false)
+  const [isRestarting, setIsRestarting] = useState(false)
   const terminalRef = useRef<HTMLDivElement>(null)
   const sessionIdRef = useRef<string | null>(null)
   const xtermRef = useRef<import('@xterm/xterm').Terminal | null>(null)
   const fitAddonRef = useRef<import('@xterm/addon-fit').FitAddon | null>(null)
+  const dataUnsubscribeRef = useRef<(() => void) | null>(null)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
+  const lastAutoModeRef = useRef(false)
 
   // Cleanup PTY session and xterm on unmount
   useEffect(() => {
     return () => {
+      dataUnsubscribeRef.current?.()
+      resizeObserverRef.current?.disconnect()
       if (sessionIdRef.current) {
         window.api.ptyDestroy(sessionIdRef.current).catch(() => {})
       }
@@ -149,7 +155,78 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     }
   }, [])
 
+  /** Build the doctor command string based on agent and auto-fix mode */
+  const getDoctorCommand = useCallback((autoMode: boolean): string => {
+    if (selectedAgent === 'claude-code') {
+      const flags = autoMode ? ' --allow-dangerously-skip-permissions --permission-mode bypassPermissions' : ''
+      const doctorFlags = autoMode ? ' --auto-fix' : ''
+      return `familiar doctor${doctorFlags} | claude${flags}`
+    }
+    return 'familiar doctor'
+  }, [selectedAgent])
+
+  /** Send Ctrl+C three times with 1-second intervals, then run the command */
+  const sendCtrlCThenCommand = useCallback((sessionId: string, command: string) => {
+    const CTRL_C = '\x03'
+    // Send Ctrl+C 3 times at 1-second intervals to dismiss any init prompts
+    window.api.ptyWrite(sessionId, CTRL_C)
+    setTimeout(() => {
+      window.api.ptyWrite(sessionId, CTRL_C)
+      setTimeout(() => {
+        window.api.ptyWrite(sessionId, CTRL_C)
+        // After the third Ctrl+C, wait 1 more second then send the command
+        setTimeout(() => {
+          window.api.ptyWrite(sessionId, `${command}\n`)
+        }, 1000)
+      }, 1000)
+    }, 1000)
+  }, [])
+
+  /** Create a new PTY session and wire it to xterm. Returns the session ID. */
+  const createDoctorPty = useCallback(async (): Promise<string | null> => {
+    let cwd: string
+    try {
+      cwd = await window.api.getProjectRoot()
+    } catch {
+      cwd = '/'
+    }
+
+    // Clean up previous data listener
+    dataUnsubscribeRef.current?.()
+
+    // Destroy previous PTY session
+    if (sessionIdRef.current) {
+      await window.api.ptyDestroy(sessionIdRef.current).catch(() => {})
+      sessionIdRef.current = null
+    }
+
+    const sessionId = await window.api.ptyCreatePlain('onboarding-doctor', 'doctor', cwd)
+    sessionIdRef.current = sessionId
+
+    const term = xtermRef.current
+    if (!term) return sessionId
+
+    // Connect PTY output to xterm
+    const unsubscribe = window.api.onPtyData((sid, data) => {
+      if (sid === sessionId) {
+        term.write(data)
+      }
+    })
+    dataUnsubscribeRef.current = unsubscribe
+
+    // Resize
+    const fitAddon = fitAddonRef.current
+    if (fitAddon) {
+      fitAddon.fit()
+      await window.api.ptyResize(sessionId, term.cols, term.rows)
+    }
+
+    return sessionId
+  }, [])
+
   const handleRunDoctor = useCallback(async (autoMode = false) => {
+    lastAutoModeRef.current = autoMode
+
     // Save settings
     try {
       const settings = await window.api.readSettings()
@@ -210,25 +287,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     // Focus the terminal so user can interact immediately
     term.focus()
 
-    // Create a PTY session (will fall back to plain shell if tmux unavailable)
-    let cwd: string
-    try {
-      cwd = await window.api.getProjectRoot()
-    } catch {
-      cwd = '/'
-    }
-
-    const sessionId = await window.api.ptyCreatePlain('onboarding-doctor', 'doctor', cwd)
-    sessionIdRef.current = sessionId
-
-    // Connect PTY output to xterm
-    const unsubscribe = window.api.onPtyData((sid, data) => {
-      if (sid === sessionId) {
-        term.write(data)
-      }
-    })
-
-    // Connect xterm input to PTY
+    // Connect xterm input to PTY (persistent across restarts)
     term.onData((data) => {
       if (sessionIdRef.current) {
         window.api.ptyWrite(sessionIdRef.current, data)
@@ -246,35 +305,41 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
         // ignore
       }
     })
+    resizeObserverRef.current = resizeObserver
     resizeObserver.observe(terminalRef.current)
 
-    // Resize once now that PTY is created
-    fitAddon.fit()
-    await window.api.ptyResize(sessionId, term.cols, term.rows)
-
-    // Send the doctor command after a brief delay for shell to initialize
-    setTimeout(() => {
-      if (sessionIdRef.current) {
-        if (selectedAgent === 'claude-code') {
-          const flags = autoMode ? ' --allow-dangerously-skip-permissions --permission-mode bypassPermissions' : ''
-          const doctorFlags = autoMode ? ' --auto-fix' : ''
-          window.api.ptyWrite(sessionIdRef.current, `familiar doctor${doctorFlags} | claude${flags}\n`)
-        } else {
-          window.api.ptyWrite(sessionIdRef.current, 'familiar doctor\n')
+    // Create PTY and send doctor command
+    const sessionId = await createDoctorPty()
+    if (sessionId) {
+      // Send the doctor command after a brief delay for shell to initialize
+      setTimeout(() => {
+        if (sessionIdRef.current) {
+          window.api.ptyWrite(sessionIdRef.current, `${getDoctorCommand(autoMode)}\n`)
         }
-      }
-    }, 500)
-
-    // Store cleanup for when component unmounts
-    const currentTerminalEl = terminalRef.current
-    return () => {
-      resizeObserver.disconnect()
-      unsubscribe()
-      if (currentTerminalEl) {
-        term.dispose()
-      }
+      }, 500)
     }
-  }, [selectedAgent])
+  }, [selectedAgent, createDoctorPty, getDoctorCommand])
+
+  const handleRestartDoctor = useCallback(async () => {
+    if (isRestarting) return
+    setIsRestarting(true)
+
+    try {
+      // Clear xterm screen
+      xtermRef.current?.clear()
+
+      // Create a fresh PTY session (destroys old one internally)
+      const sessionId = await createDoctorPty()
+      if (sessionId) {
+        // Send Ctrl+C three times at 1-second intervals, then run the doctor command
+        sendCtrlCThenCommand(sessionId, getDoctorCommand(lastAutoModeRef.current))
+      }
+
+      xtermRef.current?.focus()
+    } finally {
+      setIsRestarting(false)
+    }
+  }, [isRestarting, createDoctorPty, sendCtrlCThenCommand, getDoctorCommand])
 
   const handleSkipDoctor = useCallback(async () => {
     try {
@@ -530,6 +595,21 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
 
           <div style={styles.doctorActions}>
             <button
+              style={{
+                ...styles.secondaryButton,
+                ...(isRestarting ? { opacity: 0.6, cursor: 'default' } : {})
+              }}
+              onClick={handleRestartDoctor}
+              disabled={isRestarting}
+              tabIndex={-1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.preventDefault()
+              }}
+            >
+              <RestartIcon size={16} />
+              {isRestarting ? 'Restarting...' : 'Restart'}
+            </button>
+            <button
               style={styles.primaryButton}
               onClick={onComplete}
               tabIndex={-1}
@@ -658,6 +738,17 @@ function ZapIcon({ size }: { size: number }): React.JSX.Element {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  )
+}
+
+function RestartIcon({ size }: { size: number }): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+      <path d="M16 16h5v5" />
     </svg>
   )
 }

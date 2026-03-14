@@ -26,14 +26,12 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const addProject = useWorkspaceStore((s) => s.addProject)
   const removeProject = useWorkspaceStore((s) => s.removeProject)
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
-  const projectState = useTaskStore((s) => s.projectState)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
-
-  if (!sidebarVisible) return null
-
   const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
   const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
+
+  if (!sidebarVisible) return null
 
   const handleSwitchProject = async (path: string): Promise<void> => {
     if (path === activeProjectPath) return
