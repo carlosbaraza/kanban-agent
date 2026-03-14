@@ -248,6 +248,9 @@ export class ElectronPtyManager implements IPtyManager {
         if (!exists) {
           await this._tmux.createSession(tmuxSessionName, validCwd, familiarEnv)
           isNewSession = true
+        } else {
+          // Session already exists (e.g. from previous app run) — re-inject env vars
+          await this._tmux.setEnvironment(tmuxSessionName, familiarEnv)
         }
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)

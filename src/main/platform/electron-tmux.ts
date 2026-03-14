@@ -96,6 +96,12 @@ export class ElectronTmuxManager implements ITmuxManager {
     }
   }
 
+  async setEnvironment(sessionName: string, env: Record<string, string>): Promise<void> {
+    for (const [key, value] of Object.entries(env)) {
+      await this._execTmux(['set-environment', '-t', sessionName, key, value])
+    }
+  }
+
   async attachSession(_sessionName: string): Promise<void> {
     // Internal tracking only — actual attachment is done via node-pty
     // spawning `tmux attach-session -t <name>`
