@@ -3,6 +3,7 @@ import type { CodingAgent, ProjectSettings } from '@shared/types'
 import { CODING_AGENT_LABELS } from '@shared/types/settings'
 import { DOCTOR_PROMPT } from '@shared/prompts'
 import { useTaskStore } from '@renderer/stores/task-store'
+import { useUIStore } from '@renderer/stores/ui-store'
 
 type OnboardingStep = 'open-folder' | 'select-agent' | 'install-cli' | 'doctor'
 
@@ -57,13 +58,23 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           .then((result) => setClaudeStatus(result))
           .catch(() => setClaudeStatus({ available: false, path: null, version: null }))
       }
-      // Check hooks and skill via health check
+      // Check hooks and skill directly using the current project root
       if (selectedAgent === 'claude-code' && (hooksConfigured === null || skillInstalled === null)) {
         window.api
-          .healthCheck()
-          .then((result) => {
-            if (hooksConfigured === null) setHooksConfigured(result.hooksConfigured ?? false)
-            if (skillInstalled === null) setSkillInstalled(result.skillInstalled ?? false)
+          .getProjectRoot()
+          .then((projectRoot) => {
+            if (hooksConfigured === null) {
+              window.api
+                .healthCheckHooks(projectRoot)
+                .then((result) => setHooksConfigured(result))
+                .catch(() => setHooksConfigured(false))
+            }
+            if (skillInstalled === null) {
+              window.api
+                .healthCheckSkill(projectRoot)
+                .then((result) => setSkillInstalled(result))
+                .catch(() => setSkillInstalled(false))
+            }
           })
           .catch(() => {
             if (hooksConfigured === null) setHooksConfigured(false)
@@ -136,7 +147,8 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   const handleFixHooks = useCallback(async () => {
     setHooksFixing(true)
     try {
-      const result = await window.api.healthFix('hooks-not-configured')
+      const projectRoot = await window.api.getProjectRoot()
+      const result = await window.api.healthFixForProject(projectRoot, 'hooks-not-configured')
       if (result.success) {
         setHooksConfigured(true)
       }
@@ -149,7 +161,8 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   const handleFixSkill = useCallback(async () => {
     setSkillFixing(true)
     try {
-      const result = await window.api.healthFix('skill-not-installed')
+      const projectRoot = await window.api.getProjectRoot()
+      const result = await window.api.healthFixForProject(projectRoot, 'skill-not-installed')
       if (result.success) {
         setSkillInstalled(true)
       }
@@ -271,6 +284,11 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
 
   const handleRunDoctor = useCallback(async (autoMode = false) => {
     lastAutoModeRef.current = autoMode
+
+    // Upgrade to explicit mode so file-watcher state reloads during doctor
+    // execution don't auto-close the onboarding (App.tsx auto-close only
+    // applies to non-explicit onboarding)
+    useUIStore.getState().openOnboarding(true)
 
     setDoctorRunning(true)
 
@@ -1068,7 +1086,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    maxWidth: 520,
+    maxWidth: 640,
     width: '100%',
     padding: '40px 32px',
     gap: '20px'
@@ -1115,7 +1133,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     cursor: 'pointer',
     transition: 'background-color 150ms ease',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    whiteSpace: 'nowrap' as const
   },
   secondaryButton: {
     display: 'inline-flex',
@@ -1133,7 +1152,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     cursor: 'pointer',
     transition: 'all 150ms ease',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    whiteSpace: 'nowrap' as const
   },
   autoButton: {
     display: 'inline-flex',
@@ -1151,7 +1171,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     cursor: 'pointer',
     transition: 'background-color 150ms ease',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    whiteSpace: 'nowrap' as const
   },
   checkboxLabel: {
     display: 'flex',
@@ -1397,7 +1418,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    marginTop: '4px'
+    marginTop: '4px',
+    flexWrap: 'nowrap' as const
   },
   backButton: {
     display: 'inline-flex',
@@ -1415,6 +1437,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     cursor: 'pointer',
     transition: 'color 150ms ease',
-    boxSizing: 'border-box' as const
+    boxSizing: 'border-box' as const,
+    whiteSpace: 'nowrap' as const
   }
 }
