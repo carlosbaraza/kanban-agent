@@ -175,17 +175,17 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: 480,
     borderRadius: 8,
-    border: '1px solid #2a2a3c',
-    backgroundColor: '#1a1a27',
-    boxShadow: '0 16px 70px rgba(0, 0, 0, 0.5)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    boxShadow: 'var(--shadow-lg)',
     overflow: 'hidden'
   },
   header: {
     padding: '12px 18px',
     fontSize: 13,
     fontWeight: 500,
-    color: '#8e8ea0',
-    borderBottom: '1px solid #2a2a3c',
+    color: 'var(--text-secondary)',
+    borderBottom: '1px solid var(--border)',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
   forkBadge: {
@@ -195,17 +195,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '8px 18px',
     fontSize: 12,
     fontWeight: 500,
-    color: '#5e6ad2',
+    color: 'var(--accent)',
     fontFamily: "'SF Mono', 'Fira Code', monospace",
-    borderBottom: '1px solid #2a2a3c',
-    backgroundColor: 'rgba(94, 106, 210, 0.06)'
+    borderBottom: '1px solid var(--border)',
+    backgroundColor: 'var(--accent-subtle)'
   },
   input: {
     width: '100%',
     padding: '14px 18px',
     fontSize: 15,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: '#f0f0f4',
+    color: 'var(--text-primary)',
     backgroundColor: 'transparent',
     border: 'none',
     outline: 'none',
@@ -222,19 +222,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footer: {
     padding: '8px 18px',
-    borderTop: '1px solid #2a2a3c',
+    borderTop: '1px solid var(--border)',
     display: 'flex',
     justifyContent: 'flex-end'
   },
   hint: {
     fontSize: 11,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     display: 'flex',
     alignItems: 'center',
     gap: 6
   },
   hintSep: {
-    color: '#3a3a4c'
+    color: 'var(--text-tertiary)'
   },
   kbd: {
     display: 'inline-flex',
@@ -245,9 +245,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0 5px',
     fontSize: 11,
     fontFamily: "'SF Mono', 'Fira Code', monospace",
-    color: '#8e8ea0',
-    backgroundColor: '#232334',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-elevated)',
     borderRadius: 4,
-    border: '1px solid #2a2a3c'
+    border: '1px solid var(--border)'
   }
 }

@@ -175,6 +175,11 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     const fitAddon = new FitAddon()
     fitAddonRef.current = fitAddon
 
+    // Read CSS variable values at runtime for the xterm theme
+    const rootStyles = getComputedStyle(document.documentElement)
+    const cssVar = (name: string, fallback: string): string =>
+      rootStyles.getPropertyValue(name).trim() || fallback
+
     const term = new Terminal({
       fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
       fontSize: 11,
@@ -182,18 +187,18 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
       cursorBlink: true,
       cursorStyle: 'bar',
       theme: {
-        background: '#1a1a2e',
-        foreground: '#e0e0e0',
-        cursor: '#5b5fc7',
-        selectionBackground: 'rgba(91,95,199,0.3)',
-        black: '#1a1a2e',
-        red: '#e74c3c',
-        green: '#27ae60',
-        yellow: '#e89b3e',
-        blue: '#5b5fc7',
+        background: cssVar('--bg-surface', '#1a1a27'),
+        foreground: cssVar('--text-primary', '#e0e0e0'),
+        cursor: cssVar('--accent', '#5b5fc7'),
+        selectionBackground: cssVar('--accent-subtle', 'rgba(91,95,199,0.3)'),
+        black: cssVar('--bg-surface', '#1a1a27'),
+        red: cssVar('--agent-error', '#e74c3c'),
+        green: cssVar('--status-done', '#27ae60'),
+        yellow: cssVar('--status-in-review', '#e89b3e'),
+        blue: cssVar('--accent', '#5b5fc7'),
         magenta: '#c678dd',
         cyan: '#56b6c2',
-        white: '#e0e0e0'
+        white: cssVar('--text-primary', '#e0e0e0')
       }
     })
     xtermRef.current = term
@@ -847,7 +852,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: '44px',
     padding: '0 24px',
     backgroundColor: '#c026d3',
-    color: '#fff',
+    color: 'var(--text-primary)',
     border: '1px solid transparent',
     borderRadius: '6px',
     fontSize: '13px',
@@ -961,10 +966,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
     padding: '10px 14px',
     borderRadius: '6px',
-    backgroundColor: 'rgba(39, 174, 96, 0.08)',
-    border: '1px solid rgba(39, 174, 96, 0.25)',
+    backgroundColor: 'color-mix(in srgb, var(--status-done) 8%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--status-done) 25%, transparent)',
     width: '100%',
-    color: '#27ae60'
+    color: 'var(--status-done)'
   },
   cliStatusWarn: {
     display: 'flex',
@@ -972,10 +977,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
     padding: '10px 14px',
     borderRadius: '6px',
-    backgroundColor: 'rgba(232, 155, 62, 0.08)',
-    border: '1px solid rgba(232, 155, 62, 0.25)',
+    backgroundColor: 'color-mix(in srgb, var(--status-in-review) 8%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--status-in-review) 25%, transparent)',
     width: '100%',
-    color: '#e89b3e'
+    color: 'var(--status-in-review)'
   },
   cliStatusError: {
     display: 'flex',
@@ -983,10 +988,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '8px',
     padding: '10px 14px',
     borderRadius: '6px',
-    backgroundColor: 'rgba(231, 76, 60, 0.08)',
-    border: '1px solid rgba(231, 76, 60, 0.25)',
+    backgroundColor: 'color-mix(in srgb, var(--agent-error) 8%, transparent)',
+    border: '1px solid color-mix(in srgb, var(--agent-error) 25%, transparent)',
     width: '100%',
-    color: '#e74c3c'
+    color: 'var(--agent-error)'
   },
   cliStatusText: {
     fontSize: '13px',
@@ -1092,7 +1097,7 @@ const styles: Record<string, React.CSSProperties> = {
   terminalContainer: {
     width: '100%',
     height: '480px',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '8px',
     border: '1px solid var(--border)',
     overflow: 'hidden'

@@ -124,7 +124,7 @@ function ShortcutRow({ shortcut }: { shortcut: ShortcutItem }): React.JSX.Elemen
         style={{
           ...modalStyles.row,
           cursor: hasDetail ? 'pointer' : 'default',
-          borderBottom: expanded ? 'none' : '1px solid #1f1f30'
+          borderBottom: expanded ? 'none' : '1px solid var(--border)'
         }}
         onClick={() => hasDetail && setExpanded(!expanded)}
         role={hasDetail ? 'button' : undefined}
@@ -295,9 +295,9 @@ const modalStyles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: 560,
     borderRadius: 8,
-    border: '1px solid #2a2a3c',
-    backgroundColor: '#1a1a27',
-    boxShadow: '0 16px 70px rgba(0, 0, 0, 0.5)',
+    border: '1px solid var(--border)',
+    backgroundColor: 'var(--bg-surface)',
+    boxShadow: 'var(--shadow-lg)',
     overflow: 'hidden',
     maxHeight: '80vh',
     display: 'flex',
@@ -305,7 +305,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
   },
   header: {
     padding: '8px 18px',
-    borderBottom: '1px solid #2a2a3c',
+    borderBottom: '1px solid var(--border)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between'
@@ -318,7 +318,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
     padding: '6px 14px',
     fontSize: 12,
     fontWeight: 500,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     background: 'none',
     border: 'none',
     borderBottom: '2px solid transparent',
@@ -327,13 +327,13 @@ const modalStyles: Record<string, React.CSSProperties> = {
     transition: 'color 150ms ease, border-color 150ms ease'
   },
   tabActive: {
-    color: '#c8c8d0',
-    borderBottomColor: '#5e6ad2'
+    color: 'var(--text-primary)',
+    borderBottomColor: 'var(--accent)'
   },
   closeButton: {
     background: 'none',
     border: 'none',
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     cursor: 'pointer',
     padding: 4,
     borderRadius: 4,
@@ -352,7 +352,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
   groupTitle: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
     marginBottom: 6,
@@ -363,25 +363,25 @@ const modalStyles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '5px 0',
-    borderBottom: '1px solid #1f1f30'
+    borderBottom: '1px solid var(--border)'
   },
   description: {
     fontSize: 13,
-    color: '#c8c8d0',
+    color: 'var(--text-primary)',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
   expandIcon: {
     fontSize: 10,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     marginLeft: 4
   },
   detailRow: {
     padding: '6px 12px 10px',
     fontSize: 12,
     lineHeight: 1.5,
-    color: '#8e8ea0',
-    backgroundColor: '#16161f',
-    borderBottom: '1px solid #1f1f30',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-primary)',
+    borderBottom: '1px solid var(--border)',
     borderRadius: '0 0 4px 4px',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
@@ -393,7 +393,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
     marginLeft: 16
   },
   keySep: {
-    color: '#3a3a4c',
+    color: 'var(--text-tertiary)',
     fontSize: 11,
     margin: '0 1px'
   },
@@ -406,14 +406,14 @@ const modalStyles: Record<string, React.CSSProperties> = {
     padding: '0 6px',
     fontSize: 11,
     fontFamily: "'SF Mono', 'Fira Code', monospace",
-    color: '#8e8ea0',
-    backgroundColor: '#232334',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-elevated)',
     borderRadius: 4,
-    border: '1px solid #2a2a3c'
+    border: '1px solid var(--border)'
   },
   workflowDescription: {
     fontSize: 12,
-    color: '#8e8ea0',
+    color: 'var(--text-secondary)',
     marginBottom: 8,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
@@ -422,7 +422,7 @@ const modalStyles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 10,
     padding: '6px 0',
-    borderBottom: '1px solid #1f1f30'
+    borderBottom: '1px solid var(--border)'
   },
   stepNumber: {
     display: 'inline-flex',
@@ -432,26 +432,26 @@ const modalStyles: Record<string, React.CSSProperties> = {
     height: 20,
     fontSize: 11,
     fontWeight: 600,
-    color: '#5e6ad2',
-    backgroundColor: 'rgba(94, 106, 210, 0.12)',
+    color: 'var(--accent)',
+    backgroundColor: 'var(--accent-subtle)',
     borderRadius: '50%',
     flexShrink: 0,
     fontFamily: "'SF Mono', 'Fira Code', monospace"
   },
   stepText: {
     fontSize: 13,
-    color: '#c8c8d0',
+    color: 'var(--text-primary)',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
   },
   footer: {
     padding: '8px 18px',
-    borderTop: '1px solid #2a2a3c',
+    borderTop: '1px solid var(--border)',
     display: 'flex',
     justifyContent: 'center'
   },
   hint: {
     fontSize: 11,
-    color: '#5c5c6e',
+    color: 'var(--text-tertiary)',
     display: 'flex',
     alignItems: 'center',
     gap: 6

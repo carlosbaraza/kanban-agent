@@ -75,11 +75,11 @@ if (typeof document !== 'undefined') {
       @keyframes agentPulse {
         0%, 100% {
           opacity: 1;
-          box-shadow: 0 0 0 0 rgba(94, 106, 210, 0.4);
+          box-shadow: 0 0 0 0 color-mix(in srgb, var(--agent-running) 40%, transparent);
         }
         50% {
           opacity: 0.7;
-          box-shadow: 0 0 0 4px rgba(94, 106, 210, 0);
+          box-shadow: 0 0 0 4px transparent;
         }
       }
     `

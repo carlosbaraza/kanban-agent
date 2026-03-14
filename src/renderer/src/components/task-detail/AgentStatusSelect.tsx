@@ -4,10 +4,10 @@ import { useDropdownPosition } from '@renderer/hooks/useDropdownPosition'
 import styles from './StatusSelect.module.css'
 
 const AGENT_STATUS_COLORS: Record<AgentStatus, string> = {
-  idle: '#5c5c6e',
-  running: '#5e6ad2',
-  done: '#27ae60',
-  error: '#e74c3c'
+  idle: 'var(--agent-idle)',
+  running: 'var(--agent-running)',
+  done: 'var(--agent-done)',
+  error: 'var(--agent-error)'
 }
 
 const AGENT_STATUS_LABELS: Record<AgentStatus, string> = {

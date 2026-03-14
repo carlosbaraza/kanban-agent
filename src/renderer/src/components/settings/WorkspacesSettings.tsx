@@ -360,7 +360,7 @@ const styles: Record<string, React.CSSProperties & Record<string, unknown>> = {
     borderRadius: '5px',
     border: '1px solid rgba(99, 102, 241, 0.4)',
     backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    color: '#818cf8',
+    color: 'var(--accent)',
     cursor: 'pointer'
   },
   addButton: {

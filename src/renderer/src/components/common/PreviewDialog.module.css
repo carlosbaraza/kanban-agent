@@ -97,7 +97,7 @@
 }
 
 .error {
-  color: #e74c3c;
+  color: var(--priority-urgent);
 }
 
 .codeBlock {

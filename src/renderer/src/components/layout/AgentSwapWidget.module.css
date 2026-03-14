@@ -34,7 +34,7 @@
 /* Agent error — red with glow */
 .dotError {
   background-color: var(--agent-error);
-  box-shadow: 0 0 6px 1px rgba(231, 76, 60, 0.5);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--agent-error) 50%, transparent);
 }
 
 /* Notification unread — orange */
@@ -46,11 +46,11 @@
 @keyframes notifGlow {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(232, 155, 62, 0.4);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-in-review) 40%, transparent);
   }
   50% {
     opacity: 0.8;
-    box-shadow: 0 0 0 3px rgba(232, 155, 62, 0);
+    box-shadow: 0 0 0 3px transparent;
   }
 }
 

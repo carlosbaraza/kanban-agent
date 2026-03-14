@@ -94,7 +94,7 @@ export class ErrorBoundary extends Component<Props, State> {
               width: 48,
               height: 48,
               borderRadius: 12,
-              backgroundColor: 'rgba(231, 76, 60, 0.15)',
+              backgroundColor: 'color-mix(in srgb, var(--priority-urgent) 15%, transparent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

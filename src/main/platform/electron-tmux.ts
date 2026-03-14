@@ -98,8 +98,13 @@ export class ElectronTmuxManager implements ITmuxManager {
 
   async setEnvironment(sessionName: string, env: Record<string, string>): Promise<void> {
     for (const [key, value] of Object.entries(env)) {
+      // set-environment makes it available to new windows/panes
       await this._execTmux(['set-environment', '-t', sessionName, key, value])
+      // send-keys exports it into the already-running shell
+      await this._exec(['send-keys', '-t', sessionName, `export ${key}="${value}"`, 'Enter'])
     }
+    // Clear the screen so the export commands aren't visible
+    await this._exec(['send-keys', '-t', sessionName, 'clear', 'Enter'])
   }
 
   async attachSession(_sessionName: string): Promise<void> {

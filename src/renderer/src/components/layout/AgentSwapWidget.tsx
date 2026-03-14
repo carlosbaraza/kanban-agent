@@ -181,7 +181,7 @@ export function AgentSwapWidget(): React.JSX.Element | null {
                   className={styles.previewStatusDot}
                   style={{
                     backgroundColor:
-                      previewedTask.agentStatus === 'running' ? '#5e6ad2' : '#e74c3c'
+                      previewedTask.agentStatus === 'running' ? 'var(--agent-running)' : 'var(--agent-error)'
                   }}
                 />
                 <span className={styles.previewLabel}>

@@ -153,7 +153,7 @@ const styles: Record<string, React.CSSProperties> = {
   removeButton: {
     background: 'none',
     border: 'none',
-    color: '#e74c3c',
+    color: 'var(--priority-urgent)',
     fontSize: '16px',
     cursor: 'pointer',
     padding: '0 4px',

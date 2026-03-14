@@ -138,7 +138,7 @@
   justify-content: center;
   border: none;
   background-color: rgba(0, 0, 0, 0.7);
-  color: #fff;
+  color: var(--text-primary);
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
@@ -147,7 +147,7 @@
 }
 
 .pendingImageRemove:hover {
-  background-color: #e74c3c;
+  background-color: var(--priority-urgent);
 }
 
 /* ---- Pending pasted files ---- */
@@ -236,13 +236,13 @@
 .snippetToggleOn {
   color: var(--accent);
   border-color: var(--accent);
-  background-color: rgba(99, 102, 241, 0.08);
+  background-color: var(--overlay-subtle);
 }
 
 .snippetToggleOn:hover {
   color: var(--accent);
   border-color: var(--accent);
-  background-color: rgba(99, 102, 241, 0.14);
+  background-color: var(--overlay-hover);
 }
 
 .snippetToggleCheck {
