@@ -4,12 +4,13 @@ import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useGlobalShortcuts } from '@renderer/hooks/useGlobalShortcuts'
+import { onFileChange } from '@renderer/lib/file-change-hub'
 import { AppShell, Navbar } from '@renderer/components/layout'
 import { KanbanBoard } from '@renderer/components/board'
 import { CommandPalette } from './components/command-palette'
 import { TaskDetail } from './components/task-detail'
 import { SettingsPage } from './components/settings'
-import { CreateTaskModal, KeyboardShortcutsModal, UpdateBanner } from './components/common'
+import { CreateTaskModal, KeyboardShortcutsModal, UpdateBanner, WorkspaceNameDialog } from './components/common'
 import { WorkspacePicker } from './components/workspace-picker'
 import { ThemeProvider } from './components/ThemeProvider'
 
@@ -76,13 +77,10 @@ function App(): React.JSX.Element {
 
   // Reload state when external changes are detected (e.g. CLI updates)
   useEffect(() => {
-    const unwatch = window.api.watchProjectDir(() => {
+    return onFileChange(() => {
       loadProjectState()
       loadNotifications()
     })
-    return () => {
-      unwatch()
-    }
   }, [loadProjectState, loadNotifications])
 
   // Listen for "Open Workspace" from the application menu
@@ -146,6 +144,7 @@ function App(): React.JSX.Element {
           />
         ))}
       </AppShell>
+      <WorkspaceNameDialog />
       {showWorkspacePicker && <WorkspacePicker />}
     </ThemeProvider>
   )
