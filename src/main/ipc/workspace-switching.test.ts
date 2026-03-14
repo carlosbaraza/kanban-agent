@@ -106,8 +106,10 @@ describe('workspace switching backend integration', () => {
     workspaceManager.openSingleProject(projectADir)
     workspaceManager.addProjectToWorkspace(projectBDir)
 
-    // The shared dataService — this is what file handlers use
-    sharedDataService = workspaceManager.getDataService(projectADir)
+    // Create a SEPARATE DataService for the shared reference (mirrors index.ts).
+    // This must NOT be the same object as the map entry, otherwise
+    // syncLegacyRefs() corrupts the map when switching projects.
+    sharedDataService = new DataService(projectADir)
 
     // Mock ptyManager
     const mockPtyManager = { setDataService: vi.fn() } as any
@@ -209,5 +211,29 @@ describe('workspace switching backend integration', () => {
     expect(betaTaskIds).toContain('tsk_b1')
     expect(betaTaskIds).toContain('tsk_b2')
     expect(betaTaskIds).toContain('tsk_b3')
+  })
+
+  it('switching does NOT corrupt workspace manager map entries', async () => {
+    const setActive = handlers.get('workspace:set-active-project')!
+
+    // Switch A→B→A
+    await setActive({}, projectBDir)
+    await setActive({}, projectADir)
+
+    // The workspace manager's internal DataService entries should still
+    // point to their original project roots — they must not be corrupted
+    // by the shared dataService mutations in syncLegacyRefs().
+    const dsA = workspaceManager.getDataService(projectADir)
+    const dsB = workspaceManager.getDataService(projectBDir)
+    expect(dsA.getProjectRoot()).toBe(projectADir)
+    expect(dsB.getProjectRoot()).toBe(projectBDir)
+
+    // list-all-tasks should return tasks from BOTH projects, not duplicates
+    const listAll = handlers.get('workspace:list-all-tasks')!
+    const allTasks = await listAll({})
+    const alphaCount = allTasks.filter((t: any) => t.projectPath === projectADir).length
+    const betaCount = allTasks.filter((t: any) => t.projectPath === projectBDir).length
+    expect(alphaCount).toBe(2)
+    expect(betaCount).toBe(3)
   })
 })

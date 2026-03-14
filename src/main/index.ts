@@ -12,6 +12,7 @@ import { registerCliHandlers } from './ipc/cli-handlers'
 import { registerUpdateHandlers } from './ipc/update-handlers'
 import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
 import { registerHealthHandlers } from './ipc/health-handlers'
+import { DataService } from './services/data-service'
 import { WorkspaceManager } from './services/workspace-manager'
 import { UpdateService } from './services/update-service'
 import { buildAppMenu } from './menu'
@@ -57,7 +58,11 @@ const projectRootInfo = getProjectRootFromArgs()
 
 // Open the initial project via WorkspaceManager
 workspaceManager.openSingleProject(projectRootInfo.root)
-const dataService = workspaceManager.getDataService(projectRootInfo.root)
+// Create a SEPARATE DataService for IPC handlers. This must NOT be the
+// same object as the workspace manager's internal map entry, because
+// syncLegacyRefs() mutates its projectRoot when switching projects —
+// using the same object would corrupt the map entry for the initial project.
+const dataService = new DataService(projectRootInfo.root)
 ptyManager.setDataService(dataService)
 
 function createWindow(): void {
