@@ -220,6 +220,7 @@ describe('Navbar', () => {
     fireEvent.click(screen.getByText('Run Onboarding'))
 
     expect(useUIStore.getState().onboardingOpen).toBe(true)
+    expect(useUIStore.getState().onboardingExplicit).toBe(true)
   })
 
   // --- Notification bell ---

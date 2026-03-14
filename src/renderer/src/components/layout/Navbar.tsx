@@ -268,7 +268,7 @@ export function Navbar(): React.JSX.Element {
             <button
               className={styles.helpDropdownItem}
               onClick={() => {
-                useUIStore.getState().openOnboarding()
+                useUIStore.getState().openOnboarding(true)
                 setShowHelpMenu(false)
               }}
             >
