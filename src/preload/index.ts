@@ -164,6 +164,20 @@ const api = {
   claudeCheckAvailable: (): Promise<{ available: boolean; path: string | null; version: string | null }> =>
     ipcRenderer.invoke('claude:check-available'),
 
+  // Health checks
+  healthCheck: (): Promise<{
+    issues: { id: string; severity: 'error' | 'warning'; title: string; description: string; fixable: boolean }[]
+    cliAvailable: boolean
+    agentHarnessConfigured: boolean
+    claudeAvailable: boolean | null
+    hooksConfigured: boolean | null
+    skillInstalled: boolean | null
+  }> => ipcRenderer.invoke('health:check'),
+  healthFix: (issueId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('health:fix', issueId),
+  healthFixAll: (): Promise<{ fixed: string[]; failed: string[] }> =>
+    ipcRenderer.invoke('health:fix-all'),
+
   // Shell
   openPath: (path: string): Promise<string> => ipcRenderer.invoke('shell:open-path', path),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),

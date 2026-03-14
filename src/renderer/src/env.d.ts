@@ -98,6 +98,18 @@ declare global {
       cliInstallToPath(): Promise<{ success: boolean; shell: string; error?: string }>
       claudeCheckAvailable(): Promise<{ available: boolean; path: string | null; version: string | null }>
 
+      // Health checks
+      healthCheck(): Promise<{
+        issues: { id: string; severity: 'error' | 'warning'; title: string; description: string; fixable: boolean }[]
+        cliAvailable: boolean
+        agentHarnessConfigured: boolean
+        claudeAvailable: boolean | null
+        hooksConfigured: boolean | null
+        skillInstalled: boolean | null
+      }>
+      healthFix(issueId: string): Promise<{ success: boolean; error?: string }>
+      healthFixAll(): Promise<{ fixed: string[]; failed: string[] }>
+
       // Shell
       openPath(path: string): Promise<string>
       openExternal(url: string): Promise<void>
