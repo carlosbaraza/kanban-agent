@@ -36,7 +36,13 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     version: string | null
   } | null>(null)
 
-  // Check CLI and Claude availability when entering the install-cli step
+  // Hooks and skill state
+  const [hooksConfigured, setHooksConfigured] = useState<boolean | null>(null)
+  const [hooksFixing, setHooksFixing] = useState(false)
+  const [skillInstalled, setSkillInstalled] = useState<boolean | null>(null)
+  const [skillFixing, setSkillFixing] = useState(false)
+
+  // Check CLI, Claude, hooks, and skill availability when entering the install-cli step
   useEffect(() => {
     if (step === 'install-cli') {
       if (cliAvailable === null) {
@@ -51,8 +57,21 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           .then((result) => setClaudeStatus(result))
           .catch(() => setClaudeStatus({ available: false, path: null, version: null }))
       }
+      // Check hooks and skill via health check
+      if (selectedAgent === 'claude-code' && (hooksConfigured === null || skillInstalled === null)) {
+        window.api
+          .healthCheck()
+          .then((result) => {
+            if (hooksConfigured === null) setHooksConfigured(result.hooksConfigured ?? false)
+            if (skillInstalled === null) setSkillInstalled(result.skillInstalled ?? false)
+          })
+          .catch(() => {
+            if (hooksConfigured === null) setHooksConfigured(false)
+            if (skillInstalled === null) setSkillInstalled(false)
+          })
+      }
     }
-  }, [step, cliAvailable, claudeStatus, selectedAgent])
+  }, [step, cliAvailable, claudeStatus, selectedAgent, hooksConfigured, skillInstalled])
 
   const handleOpenFolder = useCallback(async () => {
     const success = await openWorkspace()
@@ -112,6 +131,32 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
       setCliInstallResult({ success: false, shell: '', error: 'Installation failed' })
     }
     setCliInstalling(false)
+  }, [])
+
+  const handleFixHooks = useCallback(async () => {
+    setHooksFixing(true)
+    try {
+      const result = await window.api.healthFix('hooks-not-configured')
+      if (result.success) {
+        setHooksConfigured(true)
+      }
+    } catch {
+      // ignore
+    }
+    setHooksFixing(false)
+  }, [])
+
+  const handleFixSkill = useCallback(async () => {
+    setSkillFixing(true)
+    try {
+      const result = await window.api.healthFix('skill-not-installed')
+      if (result.success) {
+        setSkillInstalled(true)
+      }
+    } catch {
+      // ignore
+    }
+    setSkillFixing(false)
   }, [])
 
   const handleCliContinue = useCallback(() => {
@@ -227,15 +272,6 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
   const handleRunDoctor = useCallback(async (autoMode = false) => {
     lastAutoModeRef.current = autoMode
 
-    // Save settings
-    try {
-      const settings = await window.api.readSettings()
-      const updated: ProjectSettings = { ...settings, skipDoctor: true }
-      await window.api.writeSettings(updated)
-    } catch {
-      // ignore
-    }
-
     setDoctorRunning(true)
 
     // Dynamically import xterm to avoid bundling it in the main chunk
@@ -311,14 +347,10 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     // Create PTY and send doctor command
     const sessionId = await createDoctorPty()
     if (sessionId) {
-      // Send the doctor command after a brief delay for shell to initialize
-      setTimeout(() => {
-        if (sessionIdRef.current) {
-          window.api.ptyWrite(sessionIdRef.current, `${getDoctorCommand(autoMode)}\n`)
-        }
-      }, 500)
+      // Send Ctrl+C three times to dismiss any init prompts, then run the doctor command
+      sendCtrlCThenCommand(sessionId, getDoctorCommand(autoMode))
     }
-  }, [selectedAgent, createDoctorPty, getDoctorCommand])
+  }, [selectedAgent, createDoctorPty, getDoctorCommand, sendCtrlCThenCommand])
 
   const handleRestartDoctor = useCallback(async () => {
     if (isRestarting) return
@@ -351,6 +383,46 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
     }
     onComplete()
   }, [onComplete])
+
+  const handleDoctorDone = useCallback(async () => {
+    try {
+      const settings = await window.api.readSettings()
+      const updated: ProjectSettings = { ...settings, skipDoctor: true }
+      await window.api.writeSettings(updated)
+    } catch {
+      // ignore
+    }
+    onComplete()
+  }, [onComplete])
+
+  const handleGoBack = useCallback(() => {
+    if (step === 'select-agent' && !hasProject) {
+      setStep('open-folder')
+    } else if (step === 'install-cli') {
+      // Reset CLI check state so it re-checks when returning
+      setCliAvailable(null)
+      setCliInstallResult(null)
+      setClaudeStatus(null)
+      setHooksConfigured(null)
+      setSkillInstalled(null)
+      setStep('select-agent')
+    } else if (step === 'doctor') {
+      // Clean up PTY if doctor was running
+      if (doctorRunning) {
+        dataUnsubscribeRef.current?.()
+        resizeObserverRef.current?.disconnect()
+        if (sessionIdRef.current) {
+          window.api.ptyDestroy(sessionIdRef.current).catch(() => {})
+          sessionIdRef.current = null
+        }
+        xtermRef.current?.dispose()
+        xtermRef.current = null
+        fitAddonRef.current = null
+        setDoctorRunning(false)
+      }
+      setStep('install-cli')
+    }
+  }, [step, hasProject, doctorRunning])
 
   // ── Step 1: Open Folder ──
   if (step === 'open-folder') {
@@ -422,6 +494,15 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
               <span style={styles.agentDescription}>Not fully tested</span>
             </button>
           </div>
+
+          {!hasProject && (
+            <div style={styles.doctorActions}>
+              <button style={styles.backButton} onClick={handleGoBack}>
+                <ChevronLeftIcon size={14} />
+                Back
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -438,11 +519,12 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
             <TerminalPromptIcon size={56} />
           </div>
 
-          <h1 style={styles.title}>Install CLI</h1>
+          <h1 style={styles.title}>Setup Requirements</h1>
           <p style={styles.subtitle}>
-            The <code style={styles.inlineCode}>familiar</code> CLI lets you manage tasks from your
-            terminal and is required for agent integration.
+            Verify and install the components needed for agent integration.
           </p>
+
+          <p style={styles.sectionLabel}>Familiar CLI</p>
 
           {cliAvailable === null && (
             <div style={styles.cliStatus}>
@@ -549,6 +631,96 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
             </>
           )}
 
+          {/* Hooks check */}
+          {selectedAgent === 'claude-code' && (
+            <>
+              <div style={styles.sectionDivider} />
+              <p style={styles.sectionLabel}>Agent Hooks</p>
+
+              {hooksConfigured === null && (
+                <div style={styles.cliStatus}>
+                  <span style={styles.cliStatusText}>Checking hooks configuration...</span>
+                </div>
+              )}
+
+              {hooksConfigured === true && (
+                <div style={styles.cliStatusSuccess}>
+                  <CheckIcon />
+                  <span style={styles.cliStatusText}>
+                    Lifecycle hooks are configured
+                  </span>
+                </div>
+              )}
+
+              {hooksConfigured === false && (
+                <>
+                  <div style={styles.cliStatusWarn}>
+                    <span style={styles.cliStatusText}>
+                      Lifecycle hooks not configured
+                    </span>
+                  </div>
+
+                  <button
+                    style={{
+                      ...styles.primaryButton,
+                      ...(hooksFixing ? { opacity: 0.6, cursor: 'default' } : {})
+                    }}
+                    onClick={handleFixHooks}
+                    disabled={hooksFixing}
+                  >
+                    <WrenchIcon size={16} />
+                    {hooksFixing ? 'Installing...' : 'Install Hooks'}
+                  </button>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Skill check */}
+          {selectedAgent === 'claude-code' && (
+            <>
+              <div style={styles.sectionDivider} />
+              <p style={styles.sectionLabel}>Agent Skill</p>
+
+              {skillInstalled === null && (
+                <div style={styles.cliStatus}>
+                  <span style={styles.cliStatusText}>Checking skill installation...</span>
+                </div>
+              )}
+
+              {skillInstalled === true && (
+                <div style={styles.cliStatusSuccess}>
+                  <CheckIcon />
+                  <span style={styles.cliStatusText}>
+                    Familiar agent skill is installed
+                  </span>
+                </div>
+              )}
+
+              {skillInstalled === false && (
+                <>
+                  <div style={styles.cliStatusWarn}>
+                    <span style={styles.cliStatusText}>
+                      Familiar agent skill not installed
+                    </span>
+                  </div>
+
+                  <button
+                    style={{
+                      ...styles.primaryButton,
+                      ...(skillFixing ? { opacity: 0.6, cursor: 'default' } : {})
+                    }}
+                    onClick={handleFixSkill}
+                    disabled={skillFixing}
+                  >
+                    <WrenchIcon size={16} />
+                    {skillFixing ? 'Installing...' : 'Install Skill'}
+                  </button>
+                </>
+              )}
+            </>
+          )}
+
           <div style={styles.cliManualSection}>
             <details style={styles.details}>
               <summary style={styles.detailsSummary}>Manual CLI installation instructions</summary>
@@ -565,6 +737,10 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           </div>
 
           <div style={styles.doctorActions}>
+            <button style={styles.backButton} onClick={handleGoBack}>
+              <ChevronLeftIcon size={14} />
+              Back
+            </button>
             <button style={styles.primaryButton} onClick={handleCliContinue}>
               Continue
             </button>
@@ -594,6 +770,10 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
           />
 
           <div style={styles.doctorActions}>
+            <button style={styles.backButton} onClick={handleGoBack}>
+              <ChevronLeftIcon size={14} />
+              Back
+            </button>
             <button
               style={{
                 ...styles.secondaryButton,
@@ -611,7 +791,7 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
             </button>
             <button
               style={styles.primaryButton}
-              onClick={onComplete}
+              onClick={handleDoctorDone}
               tabIndex={-1}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') e.preventDefault()
@@ -661,6 +841,10 @@ export function Onboarding({ hasProject, onComplete }: OnboardingProps): React.J
         </div>
 
         <div style={styles.doctorActions}>
+          <button style={styles.backButton} onClick={handleGoBack}>
+            <ChevronLeftIcon size={14} />
+            Back
+          </button>
           <button style={styles.primaryButton} onClick={() => handleRunDoctor(false)}>
             <PlayIcon size={16} />
             Run Doctor
@@ -753,12 +937,28 @@ function RestartIcon({ size }: { size: number }): React.JSX.Element {
   )
 }
 
+function WrenchIcon({ size }: { size: number }): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  )
+}
+
 function DownloadIcon({ size }: { size: number }): React.JSX.Element {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  )
+}
+
+function ChevronLeftIcon({ size }: { size: number }): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
     </svg>
   )
 }
@@ -1198,5 +1398,23 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '12px',
     marginTop: '4px'
+  },
+  backButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    height: '44px',
+    padding: '0 16px',
+    backgroundColor: 'transparent',
+    color: 'var(--text-tertiary)',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: 500,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    cursor: 'pointer',
+    transition: 'color 150ms ease',
+    boxSizing: 'border-box' as const
   }
 }

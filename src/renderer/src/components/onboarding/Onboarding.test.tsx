@@ -62,7 +62,9 @@ const mockApi = {
   ptyWrite: vi.fn().mockResolvedValue(undefined),
   ptyResize: vi.fn().mockResolvedValue(undefined),
   ptyDestroy: vi.fn().mockResolvedValue(undefined),
-  onPtyData: vi.fn().mockReturnValue(() => {})
+  onPtyData: vi.fn().mockReturnValue(() => {}),
+  healthCheck: vi.fn().mockResolvedValue({ hooksConfigured: true, skillInstalled: true }),
+  healthFix: vi.fn().mockResolvedValue({ success: true })
 }
 
 ;(window as any).api = mockApi
@@ -102,7 +104,7 @@ describe('Onboarding', () => {
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => {
-      expect(screen.getByText('Install CLI')).toBeInTheDocument()
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
     })
   })
 
@@ -244,7 +246,7 @@ describe('Onboarding', () => {
     render(<Onboarding hasProject={false} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Open Folder'))
     await waitFor(() => {
-      expect(screen.getByText('Install CLI')).toBeInTheDocument()
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
     })
   })
 
@@ -280,7 +282,7 @@ describe('Onboarding', () => {
     render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
     fireEvent.click(screen.getByText('Other'))
     await waitFor(() => {
-      expect(screen.getByText('Install CLI')).toBeInTheDocument()
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
     })
     // The Claude Code section label should not appear when Other is selected
     expect(screen.queryByText('Claude Code found')).not.toBeInTheDocument()
@@ -294,22 +296,29 @@ describe('Onboarding', () => {
     expect(container).toBeTruthy()
   })
 
-  it('saves skipDoctor=true and creates inline terminal when Run Doctor is clicked', async () => {
-    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+  it('creates inline terminal when Run Doctor is clicked and saves skipDoctor on Done', async () => {
+    const onComplete = vi.fn()
+    render(<Onboarding hasProject={true} onComplete={onComplete} />)
     fireEvent.click(screen.getByText('Claude Code'))
     await waitFor(() => screen.getByText('Continue'))
     fireEvent.click(screen.getByText('Continue'))
     await waitFor(() => screen.getByText('Run Doctor'))
     fireEvent.click(screen.getByText('Run Doctor'))
     await waitFor(() => {
-      // Should save skipDoctor=true
+      // Should show Done button (terminal is running)
+      expect(screen.getByText('Done')).toBeInTheDocument()
+    })
+    // skipDoctor should NOT be saved yet (only on Done)
+    expect(mockApi.writeSettings).not.toHaveBeenCalledWith(
+      expect.objectContaining({ skipDoctor: true })
+    )
+    // Click Done — should save skipDoctor=true and complete
+    fireEvent.click(screen.getByText('Done'))
+    await waitFor(() => {
       expect(mockApi.writeSettings).toHaveBeenCalledWith(
         expect.objectContaining({ skipDoctor: true })
       )
-    })
-    await waitFor(() => {
-      // Should show Done button (terminal is running)
-      expect(screen.getByText('Done')).toBeInTheDocument()
+      expect(onComplete).toHaveBeenCalled()
     })
   })
 
@@ -325,6 +334,26 @@ describe('Onboarding', () => {
     })
   })
 
+  it('sends Ctrl+C three times before running doctor command on initial run', { timeout: 10000 }, async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    fireEvent.click(screen.getByText('Run Doctor'))
+    await waitFor(() => {
+      expect(mockApi.ptyCreatePlain).toHaveBeenCalled()
+    })
+    // Wait for all Ctrl+C sends and the doctor command
+    await waitFor(() => {
+      const writeCalls = mockApi.ptyWrite.mock.calls
+      const ctrlCCalls = writeCalls.filter((c: string[]) => c[1] === '\x03')
+      expect(ctrlCCalls.length).toBe(3)
+      const doctorCall = writeCalls.find((c: string[]) => c[1]?.includes('familiar doctor'))
+      expect(doctorCall).toBeTruthy()
+    }, { timeout: 5000 })
+  })
+
   it('calls onComplete when Done is clicked in doctor terminal view', async () => {
     const onComplete = vi.fn()
     render(<Onboarding hasProject={true} onComplete={onComplete} />)
@@ -335,7 +364,9 @@ describe('Onboarding', () => {
     fireEvent.click(screen.getByText('Run Doctor'))
     await waitFor(() => screen.getByText('Done'))
     fireEvent.click(screen.getByText('Done'))
-    expect(onComplete).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalled()
+    })
   })
 
   it('shows Run Doctor Auto button for claude-code agent', async () => {
@@ -367,12 +398,12 @@ describe('Onboarding', () => {
     await waitFor(() => {
       expect(mockApi.ptyCreatePlain).toHaveBeenCalled()
     })
-    // Wait for the delayed ptyWrite call (500ms)
+    // Wait for sendCtrlCThenCommand to finish (3x Ctrl+C at 1s intervals + command)
     await waitFor(() => {
       const writeCalls = mockApi.ptyWrite.mock.calls
       const doctorCall = writeCalls.find((c: string[]) => c[1]?.includes('--auto-fix') && c[1]?.includes('--allow-dangerously-skip-permissions'))
       expect(doctorCall).toBeTruthy()
-    }, { timeout: 2000 })
+    }, { timeout: 5000 })
   })
 
   it('cleans up PTY session on unmount', async () => {
@@ -387,6 +418,179 @@ describe('Onboarding', () => {
     })
     unmount()
     expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
+  })
+
+  it('shows hooks configured when health check reports true', async () => {
+    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: true })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Lifecycle hooks are configured')).toBeInTheDocument()
+    })
+  })
+
+  it('shows hooks not configured with fix button', async () => {
+    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: false, skillInstalled: true })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Lifecycle hooks not configured')).toBeInTheDocument()
+      expect(screen.getByText('Install Hooks')).toBeInTheDocument()
+    })
+  })
+
+  it('calls healthFix when Install Hooks is clicked', async () => {
+    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: false, skillInstalled: true })
+    mockApi.healthFix.mockResolvedValue({ success: true })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Install Hooks'))
+    fireEvent.click(screen.getByText('Install Hooks'))
+    await waitFor(() => {
+      expect(mockApi.healthFix).toHaveBeenCalledWith('hooks-not-configured')
+    })
+    await waitFor(() => {
+      expect(screen.getByText('Lifecycle hooks are configured')).toBeInTheDocument()
+    })
+  })
+
+  it('shows skill installed when health check reports true', async () => {
+    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: true })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Familiar agent skill is installed')).toBeInTheDocument()
+    })
+  })
+
+  it('shows skill not installed with fix button', async () => {
+    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: false })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Familiar agent skill not installed')).toBeInTheDocument()
+      expect(screen.getByText('Install Skill')).toBeInTheDocument()
+    })
+  })
+
+  it('calls healthFix when Install Skill is clicked', async () => {
+    mockApi.healthCheck.mockResolvedValue({ hooksConfigured: true, skillInstalled: false })
+    mockApi.healthFix.mockResolvedValue({ success: true })
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Install Skill'))
+    fireEvent.click(screen.getByText('Install Skill'))
+    await waitFor(() => {
+      expect(mockApi.healthFix).toHaveBeenCalledWith('skill-not-installed')
+    })
+    await waitFor(() => {
+      expect(screen.getByText('Familiar agent skill is installed')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show hooks/skill checks for Other agent', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Other'))
+    await waitFor(() => {
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Agent Hooks')).not.toBeInTheDocument()
+    expect(screen.queryByText('Agent Skill')).not.toBeInTheDocument()
+    expect(mockApi.healthCheck).not.toHaveBeenCalled()
+  })
+})
+
+describe('Onboarding back navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockApi.readSettings.mockResolvedValue({})
+    mockApi.cliCheckAvailable.mockResolvedValue(true)
+  })
+
+  it('shows Back button on select-agent step when hasProject is false', async () => {
+    mockApi.openDirectory.mockResolvedValue('/some/path')
+    mockApi.isInitialized.mockResolvedValue(false)
+    mockApi.readProjectState.mockResolvedValue({
+      version: 1,
+      projectName: 'test',
+      tasks: [],
+      columnOrder: ['todo', 'in-progress', 'in-review', 'done', 'archived'],
+      labels: []
+    })
+    useTaskStore.setState({ projectState: null, isLoading: false })
+    render(<Onboarding hasProject={false} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Open Folder'))
+    await waitFor(() => {
+      expect(screen.getByText('Select Your Coding Agent')).toBeInTheDocument()
+    })
+    expect(screen.getByText('Back')).toBeInTheDocument()
+  })
+
+  it('does not show Back button on select-agent step when hasProject is true', () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    expect(screen.getByText('Select Your Coding Agent')).toBeInTheDocument()
+    expect(screen.queryByText('Back')).not.toBeInTheDocument()
+  })
+
+  it('navigates back from install-cli to select-agent', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Back'))
+    expect(screen.getByText('Select Your Coding Agent')).toBeInTheDocument()
+  })
+
+  it('navigates back from doctor (pre-run) to install-cli', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => {
+      expect(screen.getByText('Environment Check')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Back'))
+    await waitFor(() => {
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
+    })
+  })
+
+  it('navigates back from doctor (running) to install-cli and cleans up PTY', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => screen.getByText('Run Doctor'))
+    fireEvent.click(screen.getByText('Run Doctor'))
+    // Wait for PTY to be created and terminal to be running
+    await waitFor(() => {
+      expect(mockApi.ptyCreatePlain).toHaveBeenCalled()
+      expect(screen.getByText('Done')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Back'))
+    await waitFor(() => {
+      expect(screen.getByText('Setup Requirements')).toBeInTheDocument()
+    })
+    expect(mockApi.ptyDestroy).toHaveBeenCalledWith('session-123')
+  })
+
+  it('shows Back button on install-cli step', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => {
+      expect(screen.getByText('Back')).toBeInTheDocument()
+    })
+  })
+
+  it('shows Back button on doctor pre-run step', async () => {
+    render(<Onboarding hasProject={true} onComplete={vi.fn()} />)
+    fireEvent.click(screen.getByText('Claude Code'))
+    await waitFor(() => screen.getByText('Continue'))
+    fireEvent.click(screen.getByText('Continue'))
+    await waitFor(() => {
+      expect(screen.getByText('Back')).toBeInTheDocument()
+    })
   })
 })
 
