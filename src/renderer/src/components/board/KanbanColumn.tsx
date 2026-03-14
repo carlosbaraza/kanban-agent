@@ -172,8 +172,10 @@ export function KanbanColumn({
   const resizeCreateTextarea = useCallback(() => {
     const el = inputRef.current
     if (el) {
+      // Reset to auto to measure, but respect CSS min-height (3 rows)
       el.style.height = 'auto'
-      el.style.height = `${el.scrollHeight}px`
+      const minHeight = parseFloat(getComputedStyle(el).minHeight) || 0
+      el.style.height = `${Math.max(el.scrollHeight, minHeight)}px`
     }
   }, [])
 
@@ -383,14 +385,14 @@ export function KanbanColumn({
           <textarea
             ref={inputRef}
             className={styles.createInput}
-            placeholder="Task title... (Shift+Enter for notes, Enter to create, paste images)"
+            placeholder="Task title... (Shift+Enter for notes, paste images)"
             value={newTaskTitle}
             onChange={(e) => updateDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             onFocus={handleInputFocus}
             onBlur={handleBlur}
-            rows={1}
+            rows={3}
           />
           {pendingImages.length > 0 && (
             <div className={styles.pendingImages}>
@@ -454,6 +456,33 @@ export function KanbanColumn({
               ))}
             </div>
           )}
+          <div className={styles.createBottom}>
+            <span className={styles.createHint}>Enter to create</span>
+            <button
+              type="button"
+              className={styles.createButton}
+              disabled={!newTaskTitle.trim() && pendingImages.length === 0 && pendingPastedFiles.length === 0}
+              onClick={() => {
+                if (!newTaskTitle.trim() && pendingImages.length === 0 && pendingPastedFiles.length === 0) return
+                const lines = newTaskTitle.trim().split('\n')
+                const title = lines[0].trim() || 'Untitled'
+                const document = lines.slice(1).join('\n').trim() || undefined
+                const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
+                onCreateTask(
+                  title,
+                  document,
+                  enabled.length > 0 ? enabled : undefined,
+                  pendingImages.length > 0 ? pendingImages : undefined,
+                  pendingPastedFiles.length > 0 ? pendingPastedFiles : undefined
+                )
+                updateDraft('')
+                setPendingImages([])
+                setPendingPastedFiles([])
+              }}
+            >
+              Create Task
+            </button>
+          </div>
         </div>
       )}
 
