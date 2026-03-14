@@ -1,15 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 import type { TaskPastedFile } from '@shared/types'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useTaskStore } from '@renderer/stores/task-store'
-import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
-import { PastedFileCard } from './PastedFileCard'
-import { PreviewDialog } from './PreviewDialog'
-
-interface PendingPastedFile {
-  meta: TaskPastedFile
-  content: string
-}
+import { CreateTaskInput } from './CreateTaskInput'
+import type { CreateTaskInputHandle, PendingPastedFile } from './CreateTaskInput'
 
 export function CreateTaskModal(): React.JSX.Element | null {
   const open = useUIStore((s) => s.createTaskModalOpen)
@@ -17,76 +11,50 @@ export function CreateTaskModal(): React.JSX.Element | null {
   const closeModal = useUIStore((s) => s.closeCreateTaskModal)
   const addTask = useTaskStore((s) => s.addTask)
   const forkTask = useTaskStore((s) => s.forkTask)
-
-  const [title, setTitle] = useState('')
-  const [pendingPasted, setPendingPasted] = useState<PendingPastedFile[]>([])
-  const [previewFile, setPreviewFile] = useState<PendingPastedFile | null>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<CreateTaskInputHandle>(null)
 
   useEffect(() => {
     if (open) {
-      setTitle('')
-      setPendingPasted([])
+      inputRef.current?.clear()
       setTimeout(() => inputRef.current?.focus(), 0)
     }
   }, [open])
 
-  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const text = e.clipboardData.getData('text/plain')
-    if (text && isLargePaste(text)) {
-      e.preventDefault()
-      const meta = createPastedFileMeta(text)
-      setPendingPasted((prev) => [...prev, { meta, content: text }])
-    }
-  }, [])
-
-  const handleCreate = useCallback(async () => {
-    const lines = title.trim().split('\n')
-    const taskTitle = lines[0].trim()
-    const documentContent = lines.slice(1).join('\n').trim() || undefined
-    if (taskTitle || pendingPasted.length > 0) {
+  const handleSubmit = useCallback(
+    async (
+      title: string,
+      document?: string,
+      _enabledSnippets?: unknown,
+      _pendingImages?: unknown,
+      pendingPastedFiles?: PendingPastedFile[]
+    ) => {
       let task: import('@shared/types').Task
       if (forkFrom) {
-        task = await forkTask(forkFrom, taskTitle || 'Untitled', documentContent)
+        task = await forkTask(forkFrom, title, document)
       } else {
-        task = await addTask(taskTitle || 'Untitled')
-        if (documentContent) {
-          await window.api.writeTaskDocument(task.id, documentContent)
+        task = await addTask(title)
+        if (document) {
+          await window.api.writeTaskDocument(task.id, document)
         }
       }
       // Save pasted files
-      if (pendingPasted.length > 0) {
+      if (pendingPastedFiles && pendingPastedFiles.length > 0) {
         const pastedFiles: TaskPastedFile[] = []
-        for (const pf of pendingPasted) {
+        for (const pf of pendingPastedFiles) {
           await window.api.savePastedFile(task.id, pf.meta.filename, pf.content)
           pastedFiles.push(pf.meta)
         }
         const { updateTask } = useTaskStore.getState()
         await updateTask({ ...task, pastedFiles })
       }
-      setTitle('')
-      setPendingPasted([])
       closeModal()
 
       // Open the forked task in detail view
       if (forkFrom) {
         useUIStore.getState().openTaskDetail(task.id)
       }
-    }
-  }, [title, pendingPasted, addTask, forkTask, forkFrom, closeModal])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        handleCreate()
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        closeModal()
-      }
     },
-    [handleCreate, closeModal]
+    [addTask, forkTask, forkFrom, closeModal]
   )
 
   const handleOverlayClick = useCallback(
@@ -101,153 +69,51 @@ export function CreateTaskModal(): React.JSX.Element | null {
   if (!open) return null
 
   return (
-    <div style={styles.overlay} onClick={handleOverlayClick}>
-      <div style={styles.wrapper}>
-        <div style={styles.header}>{forkFrom ? 'Fork Task' : 'New Task'}</div>
-        {forkFrom && (
-          <div style={styles.forkBadge}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="18" r="3" />
-              <circle cx="6" cy="6" r="3" />
-              <circle cx="18" cy="6" r="3" />
-              <path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" />
-              <path d="M12 12v3" />
-            </svg>
-            Forking from {forkFrom}
-          </div>
-        )}
-        <textarea
+    <div style={overlayStyle} onClick={handleOverlayClick}>
+      <div style={wrapperStyle}>
+        <div style={headerStyle}>{forkFrom ? 'Fork Task' : 'New Task'}</div>
+        <CreateTaskInput
           ref={inputRef}
-          style={styles.input}
-          placeholder="Task title... (Shift+Enter for notes, Enter to create)"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          rows={1}
+          variant="rounded"
+          onSubmit={handleSubmit}
+          onCancel={closeModal}
+          forkFrom={forkFrom}
+          placeholder="Task title... (Shift+Enter for notes, paste images)"
         />
-        {pendingPasted.length > 0 && (
-          <div style={styles.pendingFiles}>
-            {pendingPasted.map((pf, i) => (
-              <PastedFileCard
-                key={pf.meta.filename}
-                file={pf.meta}
-                onClick={() => setPreviewFile(pf)}
-                onRemove={() => setPendingPasted((prev) => prev.filter((_, idx) => idx !== i))}
-              />
-            ))}
-          </div>
-        )}
-        <div style={styles.footer}>
-          <span style={styles.hint}>
-            <kbd style={styles.kbd}>Enter</kbd> to create
-            <span style={styles.hintSep}>&middot;</span>
-            <kbd style={styles.kbd}>Esc</kbd> to cancel
-          </span>
-        </div>
-        {previewFile && (
-          <PreviewDialog
-            taskId=""
-            file={previewFile.meta}
-            onClose={() => setPreviewFile(null)}
-          />
-        )}
       </div>
     </div>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    backdropFilter: 'blur(8px)',
-    WebkitBackdropFilter: 'blur(8px)',
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingTop: '20vh',
-    zIndex: 500,
-    animation: 'cmdkFadeIn 120ms ease'
-  },
-  wrapper: {
-    width: '100%',
-    maxWidth: 480,
-    borderRadius: 8,
-    border: '1px solid var(--border)',
-    backgroundColor: 'var(--bg-surface)',
-    boxShadow: 'var(--shadow-lg)',
-    overflow: 'hidden'
-  },
-  header: {
-    padding: '12px 18px',
-    fontSize: 13,
-    fontWeight: 500,
-    color: 'var(--text-secondary)',
-    borderBottom: '1px solid var(--border)',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
-  },
-  forkBadge: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '8px 18px',
-    fontSize: 12,
-    fontWeight: 500,
-    color: 'var(--accent)',
-    fontFamily: "'SF Mono', 'Fira Code', monospace",
-    borderBottom: '1px solid var(--border)',
-    backgroundColor: 'var(--accent-subtle)'
-  },
-  input: {
-    width: '100%',
-    padding: '14px 18px',
-    fontSize: 15,
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: 'var(--text-primary)',
-    backgroundColor: 'transparent',
-    border: 'none',
-    outline: 'none',
-    boxSizing: 'border-box',
-    resize: 'none',
-    minHeight: 44,
-    lineHeight: '1.5'
-  },
-  pendingFiles: {
-    padding: '0 12px 8px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 6
-  },
-  footer: {
-    padding: '8px 18px',
-    borderTop: '1px solid var(--border)',
-    display: 'flex',
-    justifyContent: 'flex-end'
-  },
-  hint: {
-    fontSize: 11,
-    color: 'var(--text-tertiary)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6
-  },
-  hintSep: {
-    color: 'var(--text-tertiary)'
-  },
-  kbd: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 20,
-    height: 20,
-    padding: '0 5px',
-    fontSize: 11,
-    fontFamily: "'SF Mono', 'Fira Code', monospace",
-    color: 'var(--text-secondary)',
-    backgroundColor: 'var(--bg-elevated)',
-    borderRadius: 4,
-    border: '1px solid var(--border)'
-  }
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+  paddingTop: '20vh',
+  zIndex: 500,
+  animation: 'cmdkFadeIn 120ms ease'
+}
+
+const wrapperStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 480,
+  borderRadius: 8,
+  border: '1px solid var(--border)',
+  backgroundColor: 'var(--bg-surface)',
+  boxShadow: 'var(--shadow-lg)',
+  overflow: 'hidden'
+}
+
+const headerStyle: React.CSSProperties = {
+  padding: '12px 18px',
+  fontSize: 13,
+  fontWeight: 500,
+  color: 'var(--text-secondary)',
+  borderBottom: '1px solid var(--border)',
+  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
 }

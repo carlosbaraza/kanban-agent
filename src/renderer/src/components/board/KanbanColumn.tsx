@@ -1,30 +1,17 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { Task, TaskStatus, Snippet, TaskPastedFile } from '@shared/types'
+import type { Task, TaskStatus, Snippet } from '@shared/types'
 import { COLUMN_LABELS } from '@shared/constants'
 import { useUIStore } from '@renderer/stores/ui-store'
 import { useContextMenu } from '@renderer/hooks/useContextMenu'
 import { ContextMenu } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
-import { isLargePaste, createPastedFileMeta } from '@renderer/lib/paste-utils'
+import { CreateTaskInput } from '@renderer/components/common/CreateTaskInput'
+import type { CreateTaskInputHandle, PendingImage, PendingPastedFile } from '@renderer/components/common/CreateTaskInput'
 import type { DropIndicator } from './KanbanBoard'
 import { TaskCard } from './TaskCard'
 import styles from './KanbanColumn.module.css'
-
-/** A pasted image stored in temp, pending task creation */
-export interface PendingImage {
-  tempPath: string
-  fileName: string
-  mimeType: string
-  dataUrl: string // for preview
-}
-
-/** A large pasted text pending task creation */
-export interface PendingPastedFile {
-  meta: TaskPastedFile
-  content: string
-}
 
 interface KanbanColumnProps {
   status: TaskStatus
@@ -78,28 +65,9 @@ export function KanbanColumn({
   onInputExit
 }: KanbanColumnProps): React.JSX.Element {
   const draftKey = `familiar-draft-${status}`
-  const [newTaskTitle, setNewTaskTitle] = useState(() => localStorage.getItem(draftKey) ?? '')
   const [isCreating, setIsCreating] = useState(false)
-  const [enabledSnippetIndices, setEnabledSnippetIndices] = useState<Set<number>>(() => {
-    // All snippets enabled by default
-    return new Set(allSnippets.map((_, i) => i))
-  })
-  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
-  const [pendingPastedFiles, setPendingPastedFiles] = useState<PendingPastedFile[]>([])
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<CreateTaskInputHandle>(null)
   const contextMenu = useContextMenu()
-
-  const updateDraft = useCallback(
-    (value: string) => {
-      setNewTaskTitle(value)
-      if (value) {
-        localStorage.setItem(draftKey, value)
-      } else {
-        localStorage.removeItem(draftKey)
-      }
-    },
-    [draftKey]
-  )
 
   const { isOver, setNodeRef } = useDroppable({
     id: `column-${status}`,
@@ -107,23 +75,6 @@ export function KanbanColumn({
   })
 
   const taskIds = tasks.map((t) => t.id)
-
-  // Sync enabled snippet indices when allSnippets length changes
-  useEffect(() => {
-    setEnabledSnippetIndices(new Set(allSnippets.map((_, i) => i)))
-  }, [allSnippets.length])
-
-  const toggleSnippet = useCallback((index: number) => {
-    setEnabledSnippetIndices((prev) => {
-      const next = new Set(prev)
-      if (next.has(index)) {
-        next.delete(index)
-      } else {
-        next.add(index)
-      }
-      return next
-    })
-  }, [])
 
   // Show create input when triggered externally (keyboard shortcut)
   useEffect(() => {
@@ -144,8 +95,6 @@ export function KanbanColumn({
   useEffect(() => {
     if (!alwaysShowInput) return
     const handleFocus = (): void => {
-      // Clear card keyboard focus before focusing input so handleInputFocus
-      // doesn't immediately blur (it guards against accidental browser focus shifts)
       useUIStore.getState().setFocusedColumn(-1)
       inputRef.current?.focus()
     }
@@ -159,8 +108,6 @@ export function KanbanColumn({
     const handleFocusColumn = (e: Event): void => {
       const detail = (e as CustomEvent<{ status: string }>).detail
       if (detail.status === status) {
-        // Clear card keyboard focus before focusing input so handleInputFocus
-        // doesn't immediately blur (it guards against accidental browser focus shifts)
         useUIStore.getState().setFocusedColumn(-1)
         inputRef.current?.focus()
       }
@@ -169,125 +116,15 @@ export function KanbanColumn({
     return () => window.removeEventListener('focus-column-input', handleFocusColumn)
   }, [alwaysShowInput, isCreating, status])
 
-  const resizeCreateTextarea = useCallback(() => {
-    const el = inputRef.current
-    if (el) {
-      // Reset to auto to measure, but respect CSS min-height (3 rows)
-      el.style.height = 'auto'
-      const minHeight = parseFloat(getComputedStyle(el).minHeight) || 0
-      el.style.height = `${Math.max(el.scrollHeight, minHeight)}px`
-    }
-  }, [])
-
-  useEffect(() => {
-    resizeCreateTextarea()
-  }, [newTaskTitle, resizeCreateTextarea])
-
-  const handlePaste = useCallback(
-    async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      // Check for image paste first
-      const items = e.clipboardData.items
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i]
-        if (item.kind === 'file' && item.type.startsWith('image/')) {
-          e.preventDefault()
-          const blob = item.getAsFile()
-          if (!blob) continue
-          const arrayBuffer = await blob.arrayBuffer()
-          const mimeType = item.type
-          const tempPath = await window.api.clipboardSaveImage(arrayBuffer, mimeType)
-          const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/jpeg' ? 'jpg' : 'png'
-          const fileName = `paste-${Date.now()}.${ext}`
-
-          // Create data URL for preview
-          const base64 = btoa(
-            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-          )
-          const dataUrl = `data:${mimeType};base64,${base64}`
-
-          setPendingImages((prev) => [...prev, { tempPath, fileName, mimeType, dataUrl }])
-          return
-        }
-      }
-
-      // Check for large text paste
-      const text = e.clipboardData.getData('text/plain')
-      if (text && isLargePaste(text)) {
-        e.preventDefault()
-        const meta = createPastedFileMeta(text)
-        setPendingPastedFiles((prev) => [...prev, { meta, content: text }])
-      }
-    },
-    []
-  )
-
-  const removePendingImage = useCallback((index: number) => {
-    setPendingImages((prev) => prev.filter((_, i) => i !== index))
-  }, [])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey && (newTaskTitle.trim() || pendingImages.length > 0 || pendingPastedFiles.length > 0)) {
-        e.preventDefault()
-        const lines = newTaskTitle.trim().split('\n')
-        const title = lines[0].trim() || 'Untitled'
-        const document = lines.slice(1).join('\n').trim() || undefined
-        const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
-        onCreateTask(
-          title,
-          document,
-          enabled.length > 0 ? enabled : undefined,
-          pendingImages.length > 0 ? pendingImages : undefined,
-          pendingPastedFiles.length > 0 ? pendingPastedFiles : undefined
-        )
-        updateDraft('')
-        setPendingImages([])
-        setPendingPastedFiles([])
-      }
-      if (e.key === 'Escape') {
-        updateDraft('')
-        setPendingImages([])
-        setPendingPastedFiles([])
-        if (!alwaysShowInput) {
-          setIsCreating(false)
-        }
-        ;(e.target as HTMLTextAreaElement).blur()
-      }
-      // ArrowDown at last visual line: exit input and start navigating tasks.
-      // We let the browser handle ArrowDown first, then check if the cursor
-      // actually moved. If it didn't, the cursor was on the last visual line
-      // (accounting for soft-wrapped text, not just hard newlines).
-      if (e.key === 'ArrowDown') {
-        const textarea = e.target as HTMLTextAreaElement
-        const { selectionStart, selectionEnd } = textarea
-        const isCollapsed = selectionStart === selectionEnd
-        if (isCollapsed) {
-          const posBefore = selectionEnd
-          // Let the browser handle the ArrowDown natively, then check
-          requestAnimationFrame(() => {
-            if (textarea.selectionStart === posBefore && textarea.selectionEnd === posBefore) {
-              textarea.blur()
-              onInputExit?.()
-            }
-          })
-        }
-      }
-    },
-    [newTaskTitle, pendingImages, pendingPastedFiles, onCreateTask, alwaysShowInput, onInputExit, updateDraft, allSnippets, enabledSnippetIndices]
-  )
-
   const handleInputFocus = useCallback(() => {
-    // Clear card keyboard focus so only the input shows as focused.
-    // (closeTaskDetail already blurs the active element before state change,
-    // so accidental browser focus shifts no longer reach this input.)
     useUIStore.getState().setFocusedColumn(-1)
   }, [])
 
-  const handleBlur = useCallback(() => {
-    if (!alwaysShowInput && !newTaskTitle.trim()) {
+  const handleInputCancel = useCallback(() => {
+    if (!alwaysShowInput) {
       setIsCreating(false)
     }
-  }, [newTaskTitle, alwaysShowInput])
+  }, [alwaysShowInput])
 
   const columnContextItems: ContextMenuItem[] = [
     ...(status === 'todo'
@@ -381,109 +218,16 @@ export function KanbanColumn({
       </div>
 
       {(alwaysShowInput || isCreating) && (
-        <div className={styles.createWidget}>
-          <textarea
-            ref={inputRef}
-            className={styles.createInput}
-            placeholder="Task title... (Shift+Enter for notes, paste images)"
-            value={newTaskTitle}
-            onChange={(e) => updateDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onFocus={handleInputFocus}
-            onBlur={handleBlur}
-            rows={3}
-          />
-          {pendingImages.length > 0 && (
-            <div className={styles.pendingImages}>
-              {pendingImages.map((img, i) => (
-                <div key={i} className={styles.pendingImageThumb}>
-                  <img src={img.dataUrl} alt={img.fileName} />
-                  <button
-                    className={styles.pendingImageRemove}
-                    onClick={() => removePendingImage(i)}
-                    type="button"
-                    aria-label="Remove image"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {pendingPastedFiles.length > 0 && (
-            <div className={styles.pendingPastedFiles}>
-              {pendingPastedFiles.map((pf, i) => (
-                <div key={pf.meta.filename} className={styles.pendingPastedCard}>
-                  <div className={styles.pendingPastedInfo}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    <span className={styles.pendingPastedLabel}>{pf.meta.label}</span>
-                    <span className={styles.pendingPastedMeta}>
-                      {pf.meta.lineCount} lines
-                    </span>
-                  </div>
-                  <button
-                    className={styles.pendingImageRemove}
-                    onClick={() => setPendingPastedFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                    type="button"
-                    aria-label="Remove pasted file"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          {allSnippets.length > 0 && (
-            <div className={styles.snippetToggles}>
-              <span className={styles.snippetTogglesLabel}>Auto-run on create:</span>
-              {allSnippets.map((snippet, i) => (
-                <button
-                  key={i}
-                  className={`${styles.snippetToggle} ${enabledSnippetIndices.has(i) ? styles.snippetToggleOn : ''}`}
-                  onClick={() => toggleSnippet(i)}
-                  title={`${snippet.command}${enabledSnippetIndices.has(i) ? ' (enabled)' : ' (disabled)'}`}
-                  type="button"
-                >
-                  <span className={styles.snippetToggleCheck}>
-                    {enabledSnippetIndices.has(i) ? '✓' : ''}
-                  </span>
-                  {snippet.title}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className={styles.createBottom}>
-            <span className={styles.createHint}>Enter to create</span>
-            <button
-              type="button"
-              className={styles.createButton}
-              disabled={!newTaskTitle.trim() && pendingImages.length === 0 && pendingPastedFiles.length === 0}
-              onClick={() => {
-                if (!newTaskTitle.trim() && pendingImages.length === 0 && pendingPastedFiles.length === 0) return
-                const lines = newTaskTitle.trim().split('\n')
-                const title = lines[0].trim() || 'Untitled'
-                const document = lines.slice(1).join('\n').trim() || undefined
-                const enabled = allSnippets.filter((_, i) => enabledSnippetIndices.has(i))
-                onCreateTask(
-                  title,
-                  document,
-                  enabled.length > 0 ? enabled : undefined,
-                  pendingImages.length > 0 ? pendingImages : undefined,
-                  pendingPastedFiles.length > 0 ? pendingPastedFiles : undefined
-                )
-                updateDraft('')
-                setPendingImages([])
-                setPendingPastedFiles([])
-              }}
-            >
-              Create Task
-            </button>
-          </div>
-        </div>
+        <CreateTaskInput
+          ref={inputRef}
+          variant="square"
+          onSubmit={onCreateTask}
+          onCancel={handleInputCancel}
+          onInputExit={onInputExit}
+          onFocus={handleInputFocus}
+          allSnippets={allSnippets}
+          draftKey={draftKey}
+        />
       )}
 
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
