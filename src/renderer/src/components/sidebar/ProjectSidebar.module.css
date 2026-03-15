@@ -174,7 +174,77 @@
   display: flex;
 }
 
-/* Add project button */
+/* Worktree items — indented, smaller, no big icon */
+.worktreeItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  position: relative;
+}
+
+.sidebarExpanded .worktreeItem {
+  justify-content: flex-start;
+  padding: 4px 8px 4px 20px;
+}
+
+.worktreeItem:hover {
+  background-color: var(--bg-surface);
+}
+
+.worktreeItem:hover .removeButton {
+  display: flex;
+}
+
+.worktreeIcon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.worktreeName {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Create worktree inline button */
+.createWorktreeButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 8px 2px 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  font-size: 11px;
+  transition: color var(--transition-fast);
+  width: 100%;
+}
+
+.createWorktreeButton:hover {
+  color: var(--text-secondary);
+}
+
+/* Bottom buttons container */
+.bottomButtons {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Add project / create worktree buttons */
 .addButton {
   display: flex;
   align-items: center;
@@ -189,8 +259,6 @@
   font-size: var(--font-size-sm);
   transition: color var(--transition-fast), background-color var(--transition-fast);
   flex-shrink: 0;
-  margin-top: auto;
-  border-top: 1px solid var(--border);
 }
 
 .addButton:hover {

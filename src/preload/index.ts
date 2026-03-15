@@ -216,6 +216,16 @@ const api = {
   workspaceListAllTasks: (): Promise<(Task & { projectPath: string })[]> =>
     ipcRenderer.invoke('workspace:list-all-tasks'),
 
+  // Worktree
+  worktreeList: (): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]> =>
+    ipcRenderer.invoke('worktree:list'),
+  worktreeCreate: (customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }> =>
+    ipcRenderer.invoke('worktree:create', customSlug),
+  worktreeRemove: (worktreePath: string): Promise<void> =>
+    ipcRenderer.invoke('worktree:remove', worktreePath),
+  worktreeGetGitRoot: (): Promise<string | null> =>
+    ipcRenderer.invoke('worktree:get-git-root'),
+
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
 

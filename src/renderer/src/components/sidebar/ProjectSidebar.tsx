@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import { useTaskStore } from '@renderer/stores/task-store'
 import { useUIStore } from '@renderer/stores/ui-store'
@@ -17,6 +18,15 @@ function getProjectColor(name: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
+// Git branch icon (small)
+function BranchIcon(): React.JSX.Element {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.6">
+      <path d="M9.5 3.25a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.493 2.493 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25Zm-6 0a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Zm8.25-.75a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Z" />
+    </svg>
+  )
+}
+
 export function ProjectSidebar(): React.JSX.Element | null {
   const openProjects = useWorkspaceStore((s) => s.openProjects)
   const activeProjectPath = useWorkspaceStore((s) => s.activeProjectPath)
@@ -26,12 +36,20 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const addProject = useWorkspaceStore((s) => s.addProject)
   const removeProject = useWorkspaceStore((s) => s.removeProject)
   const toggleSidebar = useWorkspaceStore((s) => s.toggleSidebar)
+  const loadWorktrees = useWorkspaceStore((s) => s.loadWorktrees)
+  const createWorktree = useWorkspaceStore((s) => s.createWorktree)
+  const removeWorktree = useWorkspaceStore((s) => s.removeWorktree)
   const loadProjectState = useTaskStore((s) => s.loadProjectState)
   const loadNotifications = useNotificationStore((s) => s.loadNotifications)
   const loadWorkspaceNotifications = useNotificationStore((s) => s.loadWorkspaceNotifications)
   const workspaceUnreadCountForProject = useNotificationStore((s) => s.workspaceUnreadCountForProject)
   const saveProjectTaskState = useUIStore((s) => s.saveProjectTaskState)
   const restoreProjectTaskState = useUIStore((s) => s.restoreProjectTaskState)
+
+  // Load worktrees on mount and when projects change
+  useEffect(() => {
+    loadWorktrees()
+  }, [activeProjectPath])
 
   if (!sidebarVisible) return null
 
@@ -42,23 +60,49 @@ export function ProjectSidebar(): React.JSX.Element | null {
       saveProjectTaskState(activeProjectPath)
     }
     await switchProject(path)
-    // switchProject calls workspaceSetActiveProject which updates both the
-    // workspace manager's active project and legacy dataService/ptyManager refs.
-    // Do NOT call setProjectRoot here — it triggers openSingleProject which
-    // destroys multi-project state by calling closeAll().
     await loadProjectState()
-    // Reload notifications for the newly active project and workspace-wide
     await loadNotifications()
     await loadWorkspaceNotifications()
-    // Restore task detail state for the target project
     restoreProjectTaskState(path)
   }
 
   const handleAddProject = async (): Promise<void> => {
     const path = await addProject()
     if (path) {
-      // Switch to the newly added project
       await handleSwitchProject(path)
+    }
+  }
+
+  const handleCreateWorktree = async (): Promise<void> => {
+    try {
+      const worktree = await createWorktree()
+      // Open the worktree as a new project and switch to it
+      await window.api.workspaceAddProject(worktree.path)
+      const { loadOpenProjects } = useWorkspaceStore.getState()
+      await loadOpenProjects()
+      await handleSwitchProject(worktree.path)
+    } catch (err) {
+      console.error('Failed to create worktree:', err)
+    }
+  }
+
+  const handleOpenWorktree = async (worktreePath: string): Promise<void> => {
+    // If the worktree isn't already open as a project, add it
+    if (!openProjects.some((p) => p.path === worktreePath)) {
+      await window.api.workspaceAddProject(worktreePath)
+      const { loadOpenProjects } = useWorkspaceStore.getState()
+      await loadOpenProjects()
+    }
+    await handleSwitchProject(worktreePath)
+  }
+
+  const handleRemoveWorktree = async (e: React.MouseEvent, worktreePath: string): Promise<void> => {
+    e.stopPropagation()
+    if (!confirm('Remove this worktree? This will delete the worktree directory and its branch.')) return
+    try {
+      await removeWorktree(worktreePath)
+    } catch (err) {
+      console.error('Failed to remove worktree:', err)
     }
   }
 
@@ -90,52 +134,104 @@ export function ProjectSidebar(): React.JSX.Element | null {
           const isActive = project.path === activeProjectPath
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
-
-          // Show unread notification count for ALL projects in the workspace
           const unread = workspaceUnreadCountForProject(project.path)
+          const worktrees = project.worktrees || []
 
           return (
-            <div
-              key={project.path}
-              className={`${styles.projectItem} ${isActive ? styles.projectItemActive : ''}`}
-              onClick={() => handleSwitchProject(project.path)}
-              title={project.path}
-              data-testid={`project-item-${project.name}`}
-            >
-              <div className={styles.projectIconWrapper}>
-                <div
-                  className={styles.projectIcon}
-                  style={{ backgroundColor: color }}
-                >
-                  {initial}
-                </div>
-                {!sidebarExpanded && unread > 0 && (
-                  <span className={styles.iconBadge} data-testid={`badge-${project.name}`}>
-                    {unread > 99 ? '99+' : unread}
-                  </span>
-                )}
-              </div>
-              {sidebarExpanded && (
-                <div className={styles.projectInfo}>
-                  <span className={styles.projectName}>{project.name}</span>
-                  {unread > 0 && (
-                    <span className={styles.projectUnread}>{unread} unread</span>
+            <div key={project.path}>
+              {/* Main project item */}
+              <div
+                className={`${styles.projectItem} ${isActive ? styles.projectItemActive : ''}`}
+                onClick={() => handleSwitchProject(project.path)}
+                title={project.path}
+                data-testid={`project-item-${project.name}`}
+              >
+                <div className={styles.projectIconWrapper}>
+                  <div
+                    className={styles.projectIcon}
+                    style={{ backgroundColor: color }}
+                  >
+                    {initial}
+                  </div>
+                  {!sidebarExpanded && unread > 0 && (
+                    <span className={styles.iconBadge} data-testid={`badge-${project.name}`}>
+                      {unread > 99 ? '99+' : unread}
+                    </span>
                   )}
                 </div>
-              )}
-              {sidebarExpanded && !isActive && openProjects.length > 1 && (
+                {sidebarExpanded && (
+                  <div className={styles.projectInfo}>
+                    <span className={styles.projectName}>{project.name}</span>
+                    {unread > 0 && (
+                      <span className={styles.projectUnread}>{unread} unread</span>
+                    )}
+                  </div>
+                )}
+                {sidebarExpanded && !isActive && openProjects.length > 1 && (
+                  <button
+                    className={styles.removeButton}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeProject(project.path)
+                    }}
+                    title="Remove project"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <line x1="3" y1="3" x2="9" y2="9" />
+                      <line x1="9" y1="3" x2="3" y2="9" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Worktrees under this project */}
+              {worktrees.map((wt) => {
+                const isWtActive = wt.path === activeProjectPath
+                return (
+                  <div
+                    key={wt.path}
+                    className={`${styles.worktreeItem} ${isWtActive ? styles.projectItemActive : ''}`}
+                    onClick={() => handleOpenWorktree(wt.path)}
+                    title={`${wt.branch}\n${wt.path}`}
+                    data-testid={`worktree-item-${wt.slug}`}
+                  >
+                    <div className={styles.worktreeIcon}>
+                      <BranchIcon />
+                    </div>
+                    {sidebarExpanded && (
+                      <div className={styles.projectInfo}>
+                        <span className={styles.worktreeName}>{wt.slug}</span>
+                      </div>
+                    )}
+                    {sidebarExpanded && (
+                      <button
+                        className={styles.removeButton}
+                        onClick={(e) => handleRemoveWorktree(e, wt.path)}
+                        title="Remove worktree"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                          <line x1="3" y1="3" x2="9" y2="9" />
+                          <line x1="9" y1="3" x2="3" y2="9" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Create worktree button (shown under projects that have a git repo) */}
+              {worktrees.length > 0 && sidebarExpanded && (
                 <button
-                  className={styles.removeButton}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeProject(project.path)
-                  }}
-                  title="Remove project"
+                  className={styles.createWorktreeButton}
+                  onClick={handleCreateWorktree}
+                  title="Create worktree"
+                  data-testid="create-worktree-button"
                 >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                    <line x1="3" y1="3" x2="9" y2="9" />
-                    <line x1="9" y1="3" x2="3" y2="9" />
+                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <line x1="7" y1="3" x2="7" y2="11" />
+                    <line x1="3" y1="7" x2="11" y2="7" />
                   </svg>
+                  <span>New worktree</span>
                 </button>
               )}
             </div>
@@ -143,19 +239,33 @@ export function ProjectSidebar(): React.JSX.Element | null {
         })}
       </div>
 
-      {/* Add project button */}
-      <button
-        className={styles.addButton}
-        onClick={handleAddProject}
-        title="Add project"
-        data-testid="add-project-button"
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <line x1="7" y1="3" x2="7" y2="11" />
-          <line x1="3" y1="7" x2="11" y2="7" />
-        </svg>
-        {sidebarExpanded && <span>Add Project</span>}
-      </button>
+      {/* Bottom buttons */}
+      <div className={styles.bottomButtons}>
+        {/* Create worktree button */}
+        <button
+          className={styles.addButton}
+          onClick={handleCreateWorktree}
+          title="Create worktree"
+          data-testid="create-worktree-sidebar-button"
+        >
+          <BranchIcon />
+          {sidebarExpanded && <span>New Worktree</span>}
+        </button>
+
+        {/* Add project button */}
+        <button
+          className={styles.addButton}
+          onClick={handleAddProject}
+          title="Add project"
+          data-testid="add-project-button"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <line x1="7" y1="3" x2="7" y2="11" />
+            <line x1="3" y1="7" x2="11" y2="7" />
+          </svg>
+          {sidebarExpanded && <span>Add Project</span>}
+        </button>
+      </div>
     </div>
   )
 }

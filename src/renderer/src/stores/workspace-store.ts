@@ -1,10 +1,18 @@
 import { create } from 'zustand'
 import type { Workspace } from '@shared/types'
 
+export interface WorktreeInfo {
+  path: string
+  branch: string
+  slug: string
+  isMain: boolean
+}
+
 export interface ProjectInfo {
   path: string
   name: string
   taskCount?: number // non-archived task count
+  worktrees?: WorktreeInfo[] // git worktrees associated with this project
 }
 
 interface WorkspaceState {
@@ -43,6 +51,11 @@ interface WorkspaceState {
   resolveWorkspaceNamePrompt: (name: string | null) => void
 
   updateProjectTaskCount: (projectPath: string, count: number) => void
+
+  // Worktree actions
+  loadWorktrees: () => Promise<void>
+  createWorktree: (customSlug?: string) => Promise<WorktreeInfo>
+  removeWorktree: (worktreePath: string) => Promise<void>
 
   createWorkspace: (name: string, paths: string[]) => Promise<Workspace>
   updateWorkspace: (id: string, updates: Partial<Workspace>) => Promise<Workspace>
@@ -179,6 +192,54 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         p.path === projectPath ? { ...p, taskCount: count } : p
       )
     }))
+  },
+
+  loadWorktrees: async (): Promise<void> => {
+    try {
+      const worktrees = await window.api.worktreeList()
+      const gitRoot = await window.api.worktreeGetGitRoot()
+      if (!gitRoot || worktrees.length <= 1) {
+        // No git repo or only main worktree — clear worktree info
+        set((s) => ({
+          openProjects: s.openProjects.map((p) => ({ ...p, worktrees: undefined }))
+        }))
+        return
+      }
+
+      const nonMainWorktrees = worktrees.filter((w) => !w.isMain)
+
+      // Find which open project corresponds to the git root (main worktree)
+      set((s) => ({
+        openProjects: s.openProjects.map((p) => {
+          // Attach worktrees to the project whose path matches the git root
+          if (p.path === gitRoot) {
+            return { ...p, worktrees: nonMainWorktrees }
+          }
+          return p
+        }),
+        // Auto-show sidebar when worktrees exist
+        sidebarVisible: s.sidebarVisible || nonMainWorktrees.length > 0
+      }))
+    } catch {
+      // Not a git repo or git not available — ignore
+    }
+  },
+
+  createWorktree: async (customSlug?: string): Promise<WorktreeInfo> => {
+    const worktree = await window.api.worktreeCreate(customSlug)
+    const { loadWorktrees } = get()
+    await loadWorktrees()
+    return worktree
+  },
+
+  removeWorktree: async (worktreePath: string): Promise<void> => {
+    const { openProjects, removeProject, loadWorktrees } = get()
+    // If the worktree is currently open as a project, remove it first
+    if (openProjects.some((p) => p.path === worktreePath)) {
+      await removeProject(worktreePath)
+    }
+    await window.api.worktreeRemove(worktreePath)
+    await loadWorktrees()
   },
 
   createWorkspace: async (name: string, paths: string[]): Promise<Workspace> => {

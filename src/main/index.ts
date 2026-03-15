@@ -12,6 +12,7 @@ import { registerCliHandlers } from './ipc/cli-handlers'
 import { registerUpdateHandlers } from './ipc/update-handlers'
 import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
 import { registerHealthHandlers } from './ipc/health-handlers'
+import { registerWorktreeHandlers } from './ipc/worktree-handlers'
 import { DataService } from './services/data-service'
 import { WorkspaceManager } from './services/workspace-manager'
 import { UpdateService } from './services/update-service'
@@ -140,6 +141,7 @@ function createWindow(): void {
   registerUpdateHandlers(mainWindow, updateService)
   registerWorkspaceHandlers(workspaceManager, dataService, ptyManager)
   registerHealthHandlers(workspaceManager, dataService)
+  registerWorktreeHandlers(dataService)
 
   // Build and set the application menu
   const appMenu = buildAppMenu(mainWindow, updateService)

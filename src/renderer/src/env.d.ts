@@ -133,6 +133,12 @@ declare global {
       workspaceSetActiveWorkspaceId(workspaceId: string): Promise<void>
       workspaceListAllTasks(): Promise<(Task & { projectPath: string })[]>
 
+      // Worktree
+      worktreeList(): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]>
+      worktreeCreate(customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
+      worktreeRemove(worktreePath: string): Promise<void>
+      worktreeGetGitRoot(): Promise<string | null>
+
       // App info
       getVersion(): Promise<string>
 
