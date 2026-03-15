@@ -150,14 +150,31 @@ export function AgentSwapWidget(): React.JSX.Element | null {
   }
 
   const handleAgentClick = (taskId: string): void => {
-    openTaskDetail(taskId)
+    // If the task belongs to a different project/worktree, switch to it first
+    const task = allTasks.find((t) => t.id === taskId)
+    const activeProject = useWorkspaceStore.getState().activeProjectPath
+    if (task?.projectPath && task.projectPath !== activeProject) {
+      useWorkspaceStore.getState().switchProject(task.projectPath).then(() => {
+        openTaskDetail(taskId)
+      })
+    } else {
+      openTaskDetail(taskId)
+    }
     setPreview(null)
   }
 
-  const handleNotificationClick = (notification: AppNotification): void => {
+  const handleNotificationClick = (notification: WorkspaceNotification): void => {
     if (!notification.read) markRead(notification.id)
     if (notification.taskId) {
-      openTaskDetail(notification.taskId)
+      // If the notification belongs to a different project/worktree, switch first
+      const activeProject = useWorkspaceStore.getState().activeProjectPath
+      if (notification.projectPath && notification.projectPath !== activeProject) {
+        useWorkspaceStore.getState().switchProject(notification.projectPath).then(() => {
+          openTaskDetail(notification.taskId!)
+        })
+      } else {
+        openTaskDetail(notification.taskId)
+      }
     }
     setPreview(null)
   }
