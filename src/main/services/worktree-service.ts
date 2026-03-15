@@ -1,4 +1,4 @@
-import { execSync } from 'child_process'
+import { execSync, spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
 import { generateWorktreeSlug } from '../../shared/utils/name-generator'
@@ -265,6 +265,81 @@ export class WorktreeService {
         // Branch might already be gone
       }
     }
+  }
+
+  /**
+   * Run the after-worktree-create hook if it exists.
+   * The hook runs in the new worktree directory with the provided env variables.
+   * Returns a promise that resolves when the hook finishes (or immediately if no hook exists).
+   */
+  static async runPostCreateHook(
+    projectPath: string,
+    worktreePath: string,
+    envVars: Record<string, string>
+  ): Promise<{ ran: boolean; exitCode: number | null; output: string }> {
+    const gitRoot = this.getGitRoot(projectPath)
+    if (!gitRoot) return { ran: false, exitCode: null, output: '' }
+
+    const hookPath = path.join(gitRoot, '.familiar', 'hooks', 'after-worktree-create.sh')
+    if (!fs.existsSync(hookPath)) {
+      return { ran: false, exitCode: null, output: '' }
+    }
+
+    // Ensure the hook is executable
+    try {
+      fs.chmodSync(hookPath, 0o755)
+    } catch {
+      // Non-critical
+    }
+
+    const env = {
+      ...process.env,
+      MAIN_WORKTREE_DIR: gitRoot,
+      NEW_WORKTREE_DIR: worktreePath,
+      ...envVars
+    }
+
+    return new Promise((resolve) => {
+      let output = ''
+      const child = spawn('/bin/bash', [hookPath], {
+        cwd: worktreePath,
+        env,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      child.stdout?.on('data', (data) => {
+        output += data.toString()
+      })
+      child.stderr?.on('data', (data) => {
+        output += data.toString()
+      })
+
+      child.on('close', (code) => {
+        resolve({ ran: true, exitCode: code, output })
+      })
+
+      child.on('error', (err) => {
+        resolve({ ran: true, exitCode: 1, output: err.message })
+      })
+    })
+  }
+
+  /**
+   * Get the path where the after-worktree-create hook should be placed.
+   */
+  static getHookPath(projectPath: string): string | null {
+    const gitRoot = this.getGitRoot(projectPath)
+    if (!gitRoot) return null
+    return path.join(gitRoot, '.familiar', 'hooks', 'after-worktree-create.sh')
+  }
+
+  /**
+   * Check if the after-worktree-create hook exists.
+   */
+  static hookExists(projectPath: string): boolean {
+    const hookPath = this.getHookPath(projectPath)
+    if (!hookPath) return false
+    return fs.existsSync(hookPath)
   }
 
   /**

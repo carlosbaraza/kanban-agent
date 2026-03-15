@@ -146,6 +146,12 @@ declare global {
       worktreeRename(worktreePath: string, newSlug: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
       worktreeRemove(worktreePath: string): Promise<void>
       worktreeGetGitRoot(): Promise<string | null>
+      worktreeRunPostCreateHook(
+        worktreePath: string,
+        envVars: Record<string, string>
+      ): Promise<{ ran: boolean; exitCode: number | null; output: string }>
+      worktreeGetHookPath(): Promise<string | null>
+      worktreeHookExists(): Promise<boolean>
 
       // App info
       getVersion(): Promise<string>

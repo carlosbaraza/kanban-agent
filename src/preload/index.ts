@@ -235,6 +235,15 @@ const api = {
     ipcRenderer.invoke('worktree:remove', worktreePath),
   worktreeGetGitRoot: (): Promise<string | null> =>
     ipcRenderer.invoke('worktree:get-git-root'),
+  worktreeRunPostCreateHook: (
+    worktreePath: string,
+    envVars: Record<string, string>
+  ): Promise<{ ran: boolean; exitCode: number | null; output: string }> =>
+    ipcRenderer.invoke('worktree:run-post-create-hook', worktreePath, envVars),
+  worktreeGetHookPath: (): Promise<string | null> =>
+    ipcRenderer.invoke('worktree:get-hook-path'),
+  worktreeHookExists: (): Promise<boolean> =>
+    ipcRenderer.invoke('worktree:hook-exists'),
 
   // App info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),

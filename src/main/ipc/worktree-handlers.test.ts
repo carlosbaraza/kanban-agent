@@ -14,7 +14,10 @@ vi.mock('../services/worktree-service', () => ({
     listWorktrees: vi.fn(),
     createWorktree: vi.fn(),
     removeWorktree: vi.fn(),
-    getGitRoot: vi.fn()
+    getGitRoot: vi.fn(),
+    runPostCreateHook: vi.fn(),
+    getHookPath: vi.fn(),
+    hookExists: vi.fn()
   }
 }))
 
@@ -39,6 +42,9 @@ describe('worktree-handlers', () => {
     expect(handlers['worktree:create']).toBeDefined()
     expect(handlers['worktree:remove']).toBeDefined()
     expect(handlers['worktree:get-git-root']).toBeDefined()
+    expect(handlers['worktree:run-post-create-hook']).toBeDefined()
+    expect(handlers['worktree:get-hook-path']).toBeDefined()
+    expect(handlers['worktree:hook-exists']).toBeDefined()
   })
 
   it('worktree:list calls WorktreeService.listWorktrees with project root', async () => {
@@ -78,5 +84,31 @@ describe('worktree-handlers', () => {
     const result = await handlers['worktree:get-git-root']()
     expect(WorktreeService.getGitRoot).toHaveBeenCalledWith('/test/project')
     expect(result).toBe('/test/project')
+  })
+
+  it('worktree:run-post-create-hook calls WorktreeService.runPostCreateHook', async () => {
+    const mockResult = { ran: true, exitCode: 0, output: 'done' }
+    ;(WorktreeService.runPostCreateHook as any).mockResolvedValue(mockResult)
+
+    const envVars = { MY_VAR: 'value' }
+    const result = await handlers['worktree:run-post-create-hook']({}, '/some/worktree', envVars)
+    expect(WorktreeService.runPostCreateHook).toHaveBeenCalledWith('/test/project', '/some/worktree', envVars)
+    expect(result).toEqual(mockResult)
+  })
+
+  it('worktree:get-hook-path calls WorktreeService.getHookPath', async () => {
+    ;(WorktreeService.getHookPath as any).mockReturnValue('/test/project/.familiar/hooks/after-worktree-create.sh')
+
+    const result = await handlers['worktree:get-hook-path']()
+    expect(WorktreeService.getHookPath).toHaveBeenCalledWith('/test/project')
+    expect(result).toBe('/test/project/.familiar/hooks/after-worktree-create.sh')
+  })
+
+  it('worktree:hook-exists calls WorktreeService.hookExists', async () => {
+    ;(WorktreeService.hookExists as any).mockReturnValue(true)
+
+    const result = await handlers['worktree:hook-exists']()
+    expect(WorktreeService.hookExists).toHaveBeenCalledWith('/test/project')
+    expect(result).toBe(true)
   })
 })

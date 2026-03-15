@@ -5,6 +5,7 @@ import { useUIStore } from '@renderer/stores/ui-store'
 import { useNotificationStore } from '@renderer/stores/notification-store'
 import { ContextMenu } from '@renderer/components/common/ContextMenu'
 import type { ContextMenuItem } from '@renderer/components/common/ContextMenu'
+import type { WorktreeEnvVariable } from '@shared/types/settings'
 import styles from './ProjectSidebar.module.css'
 
 // Generate a consistent color from project name
@@ -63,6 +64,15 @@ export function ProjectSidebar(): React.JSX.Element | null {
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
 
+  // Create worktree dialog state
+  const [createDialog, setCreateDialog] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [createEnvVars, setCreateEnvVars] = useState<WorktreeEnvVariable[]>([])
+  const [hookPath, setHookPath] = useState<string | null>(null)
+  const [hookExists, setHookExists] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const createInputRef = useRef<HTMLInputElement>(null)
+
   // Close context menu on click outside
   useEffect(() => {
     if (!contextMenu) return
@@ -80,6 +90,23 @@ export function ProjectSidebar(): React.JSX.Element | null {
       }, 0)
     }
   }, [renameDialog])
+
+  // Focus create input when dialog opens + load settings
+  useEffect(() => {
+    if (createDialog) {
+      setTimeout(() => {
+        createInputRef.current?.focus()
+      }, 0)
+      // Load hook path and last-used env vars
+      window.api.worktreeGetHookPath().then(setHookPath)
+      window.api.worktreeHookExists().then(setHookExists)
+      window.api.readSettings().then((s) => {
+        if (s.worktreeEnvVariables && s.worktreeEnvVariables.length > 0) {
+          setCreateEnvVars(s.worktreeEnvVariables)
+        }
+      })
+    }
+  }, [createDialog])
 
   const handleRenameConfirm = useCallback(async (): Promise<void> => {
     if (!renameDialog) return
@@ -111,6 +138,78 @@ export function ProjectSidebar(): React.JSX.Element | null {
     }
   }, [handleRenameConfirm, handleRenameCancel])
 
+  const handleOpenCreateDialog = useCallback((): void => {
+    setCreateName('')
+    setCreateEnvVars([])
+    setCreateDialog(true)
+  }, [])
+
+  const handleCreateCancel = useCallback((): void => {
+    setCreateDialog(false)
+    setIsCreating(false)
+  }, [])
+
+  const handleCreateConfirm = useCallback(async (): Promise<void> => {
+    const slug = createName.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+    setIsCreating(true)
+    try {
+      const worktree = await createWorktree(slug || undefined)
+      await window.api.workspaceAddProject(worktree.path)
+      const { loadOpenProjects } = useWorkspaceStore.getState()
+      await loadOpenProjects()
+      await loadWorktrees()
+
+      // Save env vars to settings for next time
+      const userEnvVars = createEnvVars.filter((v) => v.name.trim())
+      if (userEnvVars.length > 0) {
+        const settings = await window.api.readSettings()
+        settings.worktreeEnvVariables = userEnvVars
+        await window.api.writeSettings(settings)
+      }
+
+      // Run post-create hook
+      const envRecord: Record<string, string> = {}
+      for (const v of userEnvVars) {
+        if (v.name.trim()) {
+          envRecord[v.name.trim()] = v.value
+        }
+      }
+      await window.api.worktreeRunPostCreateHook(worktree.path, envRecord)
+
+      setCreateDialog(false)
+      await handleSwitchProject(worktree.path)
+    } catch (err) {
+      console.error('Failed to create worktree:', err)
+    } finally {
+      setIsCreating(false)
+    }
+  }, [createName, createEnvVars, createWorktree, loadWorktrees])
+
+  const handleCreateKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleCreateConfirm()
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      handleCreateCancel()
+    }
+  }, [handleCreateConfirm, handleCreateCancel])
+
+  const handleAddEnvVar = useCallback((): void => {
+    setCreateEnvVars((prev) => [...prev, { name: '', value: '' }])
+  }, [])
+
+  const handleRemoveEnvVar = useCallback((index: number): void => {
+    setCreateEnvVars((prev) => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const handleUpdateEnvVar = useCallback((index: number, field: 'name' | 'value', val: string): void => {
+    setCreateEnvVars((prev) =>
+      prev.map((v, i) => (i === index ? { ...v, [field]: field === 'name' ? val.toUpperCase().replace(/[^A-Z0-9_]/g, '_') : val } : v))
+    )
+  }, [])
+
   if (!sidebarVisible) return null
 
   const handleSwitchProject = async (path: string): Promise<void> => {
@@ -132,19 +231,8 @@ export function ProjectSidebar(): React.JSX.Element | null {
     }
   }
 
-  const handleCreateWorktree = async (): Promise<void> => {
-    try {
-      const worktree = await createWorktree()
-      // Register the worktree as a project (for DataService/FileWatcher)
-      await window.api.workspaceAddProject(worktree.path)
-      const { loadOpenProjects } = useWorkspaceStore.getState()
-      await loadOpenProjects()
-      // loadWorktrees will filter the worktree out of the main project list
-      await loadWorktrees()
-      await handleSwitchProject(worktree.path)
-    } catch (err) {
-      console.error('Failed to create worktree:', err)
-    }
+  const handleCreateWorktree = (): void => {
+    handleOpenCreateDialog()
   }
 
   const handleOpenWorktree = async (worktreePath: string): Promise<void> => {
@@ -409,6 +497,114 @@ export function ProjectSidebar(): React.JSX.Element | null {
           </div>
         </div>
       )}
+
+      {/* Create worktree dialog */}
+      {createDialog && (
+        <div style={dialogStyles.overlay} onClick={(e) => { if (e.target === e.currentTarget) handleCreateCancel() }}>
+          <div style={{ ...dialogStyles.wrapper, maxWidth: 460 }}>
+            <div style={dialogStyles.header}>New Worktree</div>
+            <div style={dialogStyles.body}>
+              <label style={dialogStyles.label}>Name</label>
+              <input
+                ref={createInputRef}
+                style={dialogStyles.input}
+                type="text"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                onKeyDown={handleCreateKeyDown}
+                placeholder="e.g. fuzzy-otter (leave empty for random)"
+              />
+
+              {/* Hook info */}
+              <div style={createDialogStyles.hookInfo}>
+                <div style={createDialogStyles.hookLabel}>
+                  Post-create hook
+                  <span style={{ ...createDialogStyles.hookStatus, color: hookExists ? 'var(--color-green)' : 'var(--text-tertiary)' }}>
+                    {hookExists ? 'configured' : 'not found'}
+                  </span>
+                </div>
+                <code style={createDialogStyles.hookPath}>{hookPath || '.familiar/hooks/after-worktree-create.sh'}</code>
+                <div style={createDialogStyles.hookHint}>
+                  {hookExists
+                    ? 'This script will run in the new worktree directory after creation.'
+                    : 'Create this script to run commands after worktree creation (e.g. install deps, setup .env).'}
+                </div>
+              </div>
+
+              {/* Built-in env vars */}
+              <div style={createDialogStyles.envSection}>
+                <div style={{ ...dialogStyles.label, marginBottom: 8, marginTop: 16 }}>
+                  Environment Variables
+                  <span style={createDialogStyles.envHint}> — passed to the post-create hook</span>
+                </div>
+
+                {/* Built-in vars (non-removable) */}
+                <div style={createDialogStyles.envRow}>
+                  <input style={{ ...createDialogStyles.envName, opacity: 0.6 }} value="MAIN_WORKTREE_DIR" disabled />
+                  <input style={{ ...createDialogStyles.envValue, opacity: 0.6 }} value="(auto: main project path)" disabled />
+                  <div style={createDialogStyles.envRemoveSpacer} />
+                </div>
+                <div style={createDialogStyles.envRow}>
+                  <input style={{ ...createDialogStyles.envName, opacity: 0.6 }} value="NEW_WORKTREE_DIR" disabled />
+                  <input style={{ ...createDialogStyles.envValue, opacity: 0.6 }} value="(auto: new worktree path)" disabled />
+                  <div style={createDialogStyles.envRemoveSpacer} />
+                </div>
+
+                {/* User-defined env vars */}
+                {createEnvVars.map((v, i) => (
+                  <div key={i} style={createDialogStyles.envRow}>
+                    <input
+                      style={createDialogStyles.envName}
+                      value={v.name}
+                      onChange={(e) => handleUpdateEnvVar(i, 'name', e.target.value)}
+                      placeholder="VAR_NAME"
+                    />
+                    <input
+                      style={createDialogStyles.envValue}
+                      value={v.value}
+                      onChange={(e) => handleUpdateEnvVar(i, 'value', e.target.value)}
+                      placeholder="value"
+                    />
+                    <button
+                      style={createDialogStyles.envRemoveButton}
+                      onClick={() => handleRemoveEnvVar(i)}
+                      title="Remove variable"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <line x1="3" y1="3" x2="9" y2="9" />
+                        <line x1="9" y1="3" x2="3" y2="9" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+
+                <button style={createDialogStyles.addVarButton} onClick={handleAddEnvVar}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <line x1="6" y1="2" x2="6" y2="10" />
+                    <line x1="2" y1="6" x2="10" y2="6" />
+                  </svg>
+                  Add Variable
+                </button>
+              </div>
+            </div>
+            <div style={dialogStyles.footer}>
+              <button style={dialogStyles.cancelButton} onClick={handleCreateCancel}>
+                Cancel
+              </button>
+              <button
+                style={{
+                  ...dialogStyles.confirmButton,
+                  opacity: isCreating ? 0.5 : 1
+                }}
+                onClick={handleCreateConfirm}
+                disabled={isCreating}
+              >
+                {isCreating ? 'Creating…' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -495,5 +691,114 @@ const dialogStyles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--accent)',
     borderRadius: 6,
     cursor: 'pointer'
+  }
+}
+
+const createDialogStyles: Record<string, React.CSSProperties> = {
+  hookInfo: {
+    marginTop: 16,
+    padding: '10px 12px',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: 6
+  },
+  hookLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  hookStatus: {
+    fontSize: 11,
+    fontWeight: 400
+  },
+  hookPath: {
+    display: 'block',
+    fontSize: 11,
+    color: 'var(--text-tertiary)',
+    marginTop: 4,
+    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+    wordBreak: 'break-all' as const
+  },
+  hookHint: {
+    fontSize: 11,
+    color: 'var(--text-tertiary)',
+    marginTop: 4,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  },
+  envSection: {
+    marginTop: 0
+  },
+  envHint: {
+    fontWeight: 400,
+    color: 'var(--text-tertiary)',
+    fontSize: 11
+  },
+  envRow: {
+    display: 'flex',
+    gap: 6,
+    marginBottom: 6,
+    alignItems: 'center'
+  },
+  envName: {
+    width: '40%',
+    padding: '6px 8px',
+    fontSize: 12,
+    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: 4,
+    outline: 'none',
+    boxSizing: 'border-box' as const
+  },
+  envValue: {
+    flex: 1,
+    padding: '6px 8px',
+    fontSize: 12,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: 'var(--text-primary)',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border)',
+    borderRadius: 4,
+    outline: 'none',
+    boxSizing: 'border-box' as const
+  },
+  envRemoveButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 24,
+    height: 24,
+    padding: 0,
+    backgroundColor: 'transparent',
+    border: 'none',
+    color: 'var(--text-tertiary)',
+    cursor: 'pointer',
+    borderRadius: 4,
+    flexShrink: 0
+  },
+  envRemoveSpacer: {
+    width: 24,
+    height: 24,
+    flexShrink: 0
+  },
+  addVarButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '4px 8px',
+    fontSize: 12,
+    fontWeight: 500,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    color: 'var(--text-tertiary)',
+    backgroundColor: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    borderRadius: 4,
+    marginTop: 2
   }
 }

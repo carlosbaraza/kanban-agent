@@ -28,4 +28,26 @@ export function registerWorktreeHandlers(dataService: DataService): void {
     const projectRoot = dataService.getProjectRoot()
     return WorktreeService.getGitRoot(projectRoot)
   })
+
+  ipcMain.handle(
+    'worktree:run-post-create-hook',
+    async (
+      _,
+      worktreePath: string,
+      envVars: Record<string, string>
+    ): Promise<{ ran: boolean; exitCode: number | null; output: string }> => {
+      const projectRoot = dataService.getProjectRoot()
+      return WorktreeService.runPostCreateHook(projectRoot, worktreePath, envVars)
+    }
+  )
+
+  ipcMain.handle('worktree:get-hook-path', async (): Promise<string | null> => {
+    const projectRoot = dataService.getProjectRoot()
+    return WorktreeService.getHookPath(projectRoot)
+  })
+
+  ipcMain.handle('worktree:hook-exists', async (): Promise<boolean> => {
+    const projectRoot = dataService.getProjectRoot()
+    return WorktreeService.hookExists(projectRoot)
+  })
 }

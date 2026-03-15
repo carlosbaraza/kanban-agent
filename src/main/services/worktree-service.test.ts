@@ -205,6 +205,106 @@ describe('WorktreeService', () => {
     })
   })
 
+  describe('getHookPath', () => {
+    it('returns the hook path for a git repo', () => {
+      const hookPath = WorktreeService.getHookPath(gitRoot)
+      expect(hookPath).toBe(path.join(gitRoot, '.familiar', 'hooks', 'after-worktree-create.sh'))
+    })
+
+    it('returns null for non-git directory', () => {
+      const nonGitDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'non-git-')))
+      try {
+        expect(WorktreeService.getHookPath(nonGitDir)).toBeNull()
+      } finally {
+        fs.rmSync(nonGitDir, { recursive: true, force: true })
+      }
+    })
+  })
+
+  describe('hookExists', () => {
+    it('returns false when hook does not exist', () => {
+      expect(WorktreeService.hookExists(gitRoot)).toBe(false)
+    })
+
+    it('returns true when hook file exists', () => {
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(path.join(hooksDir, 'after-worktree-create.sh'), '#!/bin/bash\necho hello')
+      expect(WorktreeService.hookExists(gitRoot)).toBe(true)
+    })
+  })
+
+  describe('runPostCreateHook', () => {
+    it('returns ran=false when hook does not exist', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'no-hook')
+      const result = await WorktreeService.runPostCreateHook(gitRoot, wt.path, {})
+      expect(result.ran).toBe(false)
+      expect(result.exitCode).toBeNull()
+    })
+
+    it('runs the hook and returns output', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'with-hook')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'after-worktree-create.sh'),
+        '#!/bin/bash\necho "hello from hook"'
+      )
+
+      const result = await WorktreeService.runPostCreateHook(gitRoot, wt.path, {})
+      expect(result.ran).toBe(true)
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('hello from hook')
+    })
+
+    it('passes environment variables to the hook', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'env-hook')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'after-worktree-create.sh'),
+        '#!/bin/bash\necho "main=$MAIN_WORKTREE_DIR new=$NEW_WORKTREE_DIR custom=$MY_CUSTOM_VAR"'
+      )
+
+      const result = await WorktreeService.runPostCreateHook(gitRoot, wt.path, {
+        MY_CUSTOM_VAR: 'test-value'
+      })
+      expect(result.ran).toBe(true)
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain(`main=${gitRoot}`)
+      expect(result.output).toContain(`new=${wt.path}`)
+      expect(result.output).toContain('custom=test-value')
+    })
+
+    it('runs hook in the new worktree directory', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'cwd-hook')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'after-worktree-create.sh'),
+        '#!/bin/bash\npwd'
+      )
+
+      const result = await WorktreeService.runPostCreateHook(gitRoot, wt.path, {})
+      expect(result.ran).toBe(true)
+      expect(result.output.trim()).toBe(wt.path)
+    })
+
+    it('handles hook failure gracefully', async () => {
+      const wt = WorktreeService.createWorktree(gitRoot, 'fail-hook')
+      const hooksDir = path.join(gitRoot, '.familiar', 'hooks')
+      fs.mkdirSync(hooksDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(hooksDir, 'after-worktree-create.sh'),
+        '#!/bin/bash\nexit 1'
+      )
+
+      const result = await WorktreeService.runPostCreateHook(gitRoot, wt.path, {})
+      expect(result.ran).toBe(true)
+      expect(result.exitCode).toBe(1)
+    })
+  })
+
   describe('ensureGitignore', () => {
     it('does not duplicate worktrees/ entry', () => {
       // Create two worktrees — each call to createWorktree calls ensureGitignore

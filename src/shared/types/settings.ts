@@ -22,6 +22,13 @@ export const CODING_AGENT_LABELS: Record<CodingAgent, string> = {
   other: 'Other'
 }
 
+export interface WorktreeEnvVariable {
+  /** Environment variable name (ALL_CAPS) */
+  name: string
+  /** Environment variable value */
+  value: string
+}
+
 export interface ProjectSettings {
   /** Command to run in the tmux session when a task terminal is first created */
   defaultCommand?: string
@@ -41,6 +48,8 @@ export interface ProjectSettings {
   darkTheme?: string
   /** Selected light theme preset ID */
   lightTheme?: string
+  /** Last-used environment variables for the worktree post-create hook */
+  worktreeEnvVariables?: WorktreeEnvVariable[]
 }
 
 export const DEFAULT_SNIPPETS: Snippet[] = [
