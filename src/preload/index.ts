@@ -216,6 +216,14 @@ const api = {
   workspaceListAllTasks: (): Promise<(Task & { projectPath: string })[]> =>
     ipcRenderer.invoke('workspace:list-all-tasks'),
 
+  // Task worktree operations
+  taskMoveToWorktree: (
+    taskIds: string[],
+    targetProjectPath: string,
+    mode: 'copy' | 'move'
+  ): Promise<{ movedCount: number }> =>
+    ipcRenderer.invoke('task:move-to-worktree', taskIds, targetProjectPath, mode),
+
   // Worktree
   worktreeList: (): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]> =>
     ipcRenderer.invoke('worktree:list'),

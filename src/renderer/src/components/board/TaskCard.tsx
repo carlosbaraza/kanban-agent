@@ -12,8 +12,9 @@ import { useNotificationStore } from '@renderer/stores/notification-store'
 import { useBoardStore } from '@renderer/stores/board-store'
 import { onFileChange } from '@renderer/lib/file-change-hub'
 import { formatRelativeTime, formatDuration } from '@renderer/lib/format-time'
-import { ContextMenu, PriorityIcon } from '@renderer/components/common'
+import { ContextMenu, PriorityIcon, MoveToWorktreeDialog } from '@renderer/components/common'
 import type { ContextMenuItem } from '@renderer/components/common'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 import styles from './TaskCard.module.css'
 
 function getLabelColor(name: string, projectLabels: LabelConfig[]): string {
@@ -73,6 +74,15 @@ export function TaskCard({
   const markReadByTaskId = useNotificationStore((s) => s.markReadByTaskId)
   const selectedTaskIds = useBoardStore((s) => s.selectedTaskIds)
   const clearSelection = useBoardStore((s) => s.clearSelection)
+  const [showWorktreeDialog, setShowWorktreeDialog] = useState(false)
+
+  // Check if worktrees are available (for context menu)
+  const hasWorktrees = useWorkspaceStore((s) => {
+    for (const p of s.openProjects) {
+      if (p.worktrees && p.worktrees.length > 0) return true
+    }
+    return false
+  })
 
   // Inline title editing
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -417,6 +427,18 @@ export function TaskCard({
       onClick: handleCopyId,
       shortcut: ''
     },
+    ...(hasWorktrees
+      ? [
+          { label: '', onClick: () => {}, divider: true } as ContextMenuItem,
+          {
+            label: isMulti
+              ? `Move ${selectedTaskIds.size} to Worktree`
+              : 'Move to Worktree',
+            onClick: () => setShowWorktreeDialog(true),
+            shortcut: ''
+          } as ContextMenuItem
+        ]
+      : []),
     { label: '', onClick: () => {}, divider: true },
     {
       label: isMulti
@@ -619,6 +641,20 @@ export function TaskCard({
           items={contextMenuItems}
           position={contextMenu.position}
           onClose={contextMenu.close}
+        />
+      )}
+
+      {showWorktreeDialog && (
+        <MoveToWorktreeDialog
+          taskIds={
+            isMultiSelected && selectedTaskIds.size > 1
+              ? Array.from(selectedTaskIds)
+              : [task.id]
+          }
+          onClose={() => {
+            setShowWorktreeDialog(false)
+            if (isMultiSelected) clearSelection()
+          }}
         />
       )}
     </>

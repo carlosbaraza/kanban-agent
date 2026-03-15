@@ -133,6 +133,13 @@ declare global {
       workspaceSetActiveWorkspaceId(workspaceId: string): Promise<void>
       workspaceListAllTasks(): Promise<(Task & { projectPath: string })[]>
 
+      // Task worktree operations
+      taskMoveToWorktree(
+        taskIds: string[],
+        targetProjectPath: string,
+        mode: 'copy' | 'move'
+      ): Promise<{ movedCount: number }>
+
       // Worktree
       worktreeList(): Promise<{ path: string; branch: string; slug: string; isMain: boolean }[]>
       worktreeCreate(customSlug?: string): Promise<{ path: string; branch: string; slug: string; isMain: boolean }>
