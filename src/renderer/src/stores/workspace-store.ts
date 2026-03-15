@@ -13,6 +13,7 @@ export interface ProjectInfo {
   name: string
   taskCount?: number // non-archived task count
   worktrees?: WorktreeInfo[] // git worktrees associated with this project
+  isWorktree?: boolean // true if this project is a worktree (hidden from main list, shown indented)
 }
 
 interface WorkspaceState {
@@ -204,26 +205,28 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       if (!gitRoot || worktrees.length <= 1) {
         // No git repo or only main worktree — clear worktree info
         set((s) => ({
-          openProjects: s.openProjects.map((p) => ({ ...p, worktrees: undefined }))
+          openProjects: s.openProjects.map((p) => ({
+            ...p, worktrees: undefined, isWorktree: false
+          }))
         }))
         return
       }
 
       const nonMainWorktrees = worktrees.filter((w) => !w.isMain)
-      // Paths of all non-main worktrees — used to hide them from the main project list
       const worktreePaths = new Set(nonMainWorktrees.map((w) => w.path))
 
       set((s) => ({
-        // Filter out projects that are worktrees (they appear as indented items instead)
-        // and attach worktrees only to the main project (gitRoot)
-        openProjects: s.openProjects
-          .filter((p) => !worktreePaths.has(p.path))
-          .map((p) => {
-            if (p.path === gitRoot) {
-              return { ...p, worktrees: nonMainWorktrees }
-            }
-            return { ...p, worktrees: undefined }
-          }),
+        openProjects: s.openProjects.map((p) => {
+          if (p.path === gitRoot) {
+            // Main project — attach worktrees to it
+            return { ...p, worktrees: nonMainWorktrees, isWorktree: false }
+          }
+          if (worktreePaths.has(p.path)) {
+            // This project IS a worktree — mark it so the UI can hide it
+            return { ...p, worktrees: undefined, isWorktree: true }
+          }
+          return { ...p, worktrees: undefined, isWorktree: false }
+        }),
         // Auto-show sidebar when worktrees exist
         sidebarVisible: s.sidebarVisible || nonMainWorktrees.length > 0
       }))

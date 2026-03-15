@@ -253,7 +253,7 @@ export function ProjectSidebar(): React.JSX.Element | null {
 
       {/* Project list */}
       <div className={styles.projectList}>
-        {openProjects.map((project) => {
+        {openProjects.filter((p) => !p.isWorktree).map((project) => {
           const isActive = project.path === activeProjectPath
           const color = getProjectColor(project.name)
           const initial = project.name.charAt(0).toUpperCase()
